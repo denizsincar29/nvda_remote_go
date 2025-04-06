@@ -5,7 +5,7 @@
 package main
 
 import (
-	"log/slog"
+	"fmt"
 	"os"
 	"time"
 
@@ -15,11 +15,12 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	// create a new logger
+	logger := NewLogger(os.Stdout)
 	e := goerror.NewError(logger)
 	key := GetKey()
 	// create a new nvda remote client
-	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "slave")
+	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "slave", logger)
 	e.Must(err, "Failed to create NVDA remote client")
 	// defer remote.Close()  // we'd do this, but lets defer goodbye instead
 	defer GoodBye(remote)
@@ -32,25 +33,7 @@ func main() {
 			e.Must(err, "Error from NVDA remote client")
 		// check for events
 		case event := <-remote.Events():
-			switch evt := event.(type) {
-			case nvda_remote_go.MOTDEvent:
-				logger.Info("message of the day", evt.Motd)
-			case nvda_remote_go.ChannelJoinedEvent:
-				logger.Info("joined channel", evt.ID)
-			case nvda_remote_go.ChannelLeftEvent:
-				logger.Info("left channel")
-			case nvda_remote_go.ChannelMessageEvent:
-				logger.Info("received channel message", evt.Message)
-			case nvda_remote_go.ClientJoinedEvent:
-				logger.Info("client joined", evt.ID, evt.ConnectionType)
-			case nvda_remote_go.ClientLeftEvent:
-				logger.Info("client left", evt.ID)
-			case nvda_remote_go.SpeakEvent, nvda_remote_go.CancelSpeechEvent, nvda_remote_go.PauseSpeechEvent, nvda_remote_go.SendBrailleEvent:
-				// ignore because this events are for masters.
-			default:
-				logger.Info("unknown event", evt)
-
-			}
+			fmt.Println("Event received:", event)
 		case <-ticker.C:
 			remote.SendSpeech("Hello, nvda user! I'm a fake nvda remote client.")
 		default:

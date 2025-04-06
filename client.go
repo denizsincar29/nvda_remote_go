@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"encoding/json"
+	"log/slog"
 	"net"
 	"sync"
 )
@@ -18,9 +19,17 @@ type NVDARemoteClient struct {
 	closeChan    chan struct{}
 	wg           sync.WaitGroup
 	eventHandler func(Event)
+	logger       *slog.Logger
 }
 
-func NewClient(host, port, channel, connType string) (*NVDARemoteClient, error) {
+func NewClient(host, port, channel, connType string, lgr *slog.Logger) (*NVDARemoteClient, error) {
+	if port == "" {
+		port = DEFAULT_PORT
+	}
+	if lgr == nil {
+		lgr = slog.Default()
+	}
+	lgr.Debug("Creating new NVDA remote client", "host", host, "port", port, "channel", channel, "connection_type", connType)
 	conf := &tls.Config{InsecureSkipVerify: true}
 	conn, err := tls.Dial("tcp", net.JoinHostPort(host, port), conf)
 	if err != nil {
@@ -33,6 +42,7 @@ func NewClient(host, port, channel, connType string) (*NVDARemoteClient, error) 
 		sendChan:  make(chan []byte, 100),
 		errorChan: make(chan error, 10),
 		closeChan: make(chan struct{}),
+		logger:    lgr,
 	}
 
 	client.wg.Add(2)
@@ -66,7 +76,8 @@ func (c *NVDARemoteClient) readLoop() {
 				c.errorChan <- err
 				return
 			}
-
+			// debug log
+			c.logger.Debug("Received data", "data", string(data))
 			event, err := ParseEvent(data)
 			if err != nil {
 				c.errorChan <- err
