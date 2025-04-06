@@ -172,8 +172,8 @@ func (c *NVDARemoteClient) PauseSpeech(switchVal bool) {
 	})
 }
 
-// Beep sends a beep command to the NVDA remote client.
-func (c *NVDARemoteClient) Beep(hz int, length int, left ...int) {
+// SendBeep sends a beep command to the NVDA remote client.
+func (c *NVDARemoteClient) SendBeep(hz int, length int, left ...int) {
 	leftVol := 50
 	rightVol := 50
 
