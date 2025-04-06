@@ -83,7 +83,10 @@ func (c *NVDARemoteClient) readLoop() {
 				c.errorChan <- err
 				continue
 			}
-
+			// if it's a ping event, don't send it to the event channel
+			if _, ok := event.(*PingEvent); ok {
+				continue
+			}
 			if c.eventHandler != nil {
 				c.eventHandler(event)
 			} else {

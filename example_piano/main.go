@@ -35,6 +35,8 @@ func main() {
 				if e.Pressed && e.GetKey() == "space" {
 					notemaker.Start()
 				}
+			case nvda_remote_go.ClientJoinedEvent:
+				notemaker.Start()
 			}
 		case note, ok := <-notch:
 			if !ok {
