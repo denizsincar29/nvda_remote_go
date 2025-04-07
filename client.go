@@ -1,7 +1,6 @@
 package nvda_remote_go
 
 import (
-	"bufio"
 	"crypto/tls"
 	"encoding/json"
 	"log/slog"
@@ -60,19 +59,31 @@ func NewClient(host, port, channel, connType string, lgr *slog.Logger) (*NVDARem
 
 func (c *NVDARemoteClient) readLoop() {
 	defer c.wg.Done()
-	reader := bufio.NewReader(c.conn)
-
+	err := c.conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	if err != nil {
+		c.errorChan <- err
+		return
+	}
+	buffer := make([]byte, 0, 1024)
 	for {
 		select {
 		case <-c.closeChan:
 			return
 		default:
-			data, err := reader.ReadBytes('\n')
-			if err != nil {
+			// read data from the connection
+			_, err := c.conn.Read(buffer[:cap(buffer)])
+			if err != nil && !strings.Contains(err.Error(), "timeout") {
+				c.logger.Error("Error reading from connection", "error", err)
 				c.errorChan <- err
-				return
 			}
-			// debug log
+			// find the first new line character
+			newLineIndex := strings.Index(string(buffer), "\n")
+			if newLineIndex == -1 {
+				continue
+			}
+			// read the data up to the new line character and remove it from the buffer
+			data := buffer[:newLineIndex]
+			buffer = buffer[newLineIndex+1:]
 			c.logger.Debug("Received data", "data", string(data))
 			event, err := ParsePacket(data)
 			if err != nil {
@@ -88,6 +99,7 @@ func (c *NVDARemoteClient) readLoop() {
 			} else {
 				c.eventChan <- event
 			}
+
 		}
 	}
 }
