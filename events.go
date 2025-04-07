@@ -227,9 +227,9 @@ type BeepPacket struct {
 func (b BeepPacket) String() string {
 	// hz and length are always present, left and right are optional
 	if b.Left == 0 && b.Right == 0 {
-		return fmt.Sprintf("Beep event with frequency %d Hz and length %d ms", b.Hz, b.Length)
+		return fmt.Sprintf("Beep event with frequency %f Hz and length %d ms", b.Hz, b.Length)
 	} else {
-		return fmt.Sprintf("Beep event with frequency %d Hz, length %d ms, left volume %d, right volume %d", b.Hz, b.Length, b.Left, b.Right)
+		return fmt.Sprintf("Beep event with frequency %f Hz, length %d ms, left volume %d, right volume %d", b.Hz, b.Length, b.Left, b.Right)
 	}
 }
 
@@ -317,7 +317,7 @@ func (k KeyPacket) GetKey() (string, error) {
 func (k KeyPacket) String() string {
 	key, err := k.GetKey()
 	if key == "" || err != nil {
-		return fmt.Sprintf("Key event with vk code %d, scan code %d, extended %t, pressed %t", k.VKCode, k.ScanCode, k.Extended, k.Pressed)
+		return fmt.Sprintf("Key event with vk code %d, scan code %v, extended %v, pressed %t", k.VKCode, k.ScanCode, k.Extended, k.Pressed)
 	}
 	if k.Pressed {
 		return fmt.Sprintf("Key event with key %s was pressed", key)
@@ -368,6 +368,27 @@ func NewSetBrailleInfoPacket(name string, numCells int) SetBrailleInfoPacket {
 		NumCells:   numCells,
 		Origin:     nil,
 	}
+}
+
+// SetClipboardTextPacket is the event that is sent when the client sends a clipboard text command.
+type SetClipboardTextPacket struct {
+	BasePacket
+	Text   string `json:"text"`
+	Origin *int   `json:"origin,omitempty"`
+}
+
+func (s SetClipboardTextPacket) String() string {
+	return fmt.Sprintf("Set clipboard text: %s", s.Text)
+}
+
+// SendSAS is the event that is sent when the client sends send ctrl+alt+del command.
+type SendSASPacket struct {
+	BasePacket
+	Origin *int `json:"origin,omitempty"`
+}
+
+func (s SendSASPacket) String() string {
+	return "Send SAS event"
 }
 
 // PingPacket is the event that is sent when the server sends a ping command.
@@ -474,8 +495,8 @@ func ParsePacket(data []byte) (Packet, error) {
 	case "wave":
 		var e WavePacket
 		e.Kwargs = make(map[string]interface{})
-		json.Unmarshal(data, &e.Kwargs)
-		return e, nil
+		err := json.Unmarshal(data, &e.Kwargs)
+		return e, err
 	case "braille":
 		var e SendBraillePacket
 		err := json.Unmarshal(data, &e)
@@ -486,6 +507,14 @@ func ParsePacket(data []byte) (Packet, error) {
 		return e, err
 	case "set_braille_info":
 		var e SetBrailleInfoPacket
+		err := json.Unmarshal(data, &e)
+		return e, err
+	case "set_clipboard_text":
+		var e SetClipboardTextPacket
+		err := json.Unmarshal(data, &e)
+		return e, err
+	case "send_SAS":
+		var e SendSASPacket
 		err := json.Unmarshal(data, &e)
 		return e, err
 	case "ping":
