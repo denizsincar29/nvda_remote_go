@@ -2,14 +2,7 @@ package main
 
 import (
 	"math"
-	"sync"
-	"time"
 )
-
-func pitchToFreq(midinote int) float64 {
-	st := midinote - 69 // 69 is the MIDI note number for A4
-	return 440 * math.Pow(2, float64(st)/12)
-}
 
 const (
 	NOTE_C  = 0
@@ -31,78 +24,42 @@ const (
 	NOTE_B  = 11
 )
 
-func noteToMidi(note int, octave int) int {
-	// Convert note and octave to MIDI note number
-	return (octave+1)*12 + note
-}
-
-func NoteToFreq(note int, octave int) float64 {
-	// Convert note and octave to MIDI note number
-	midinote := noteToMidi(note, octave)
-	return pitchToFreq(midinote)
-}
-
 type Note struct {
-	Pitch    int // 0-11
-	Octave   int // 0-8
-	Duration int // in milliseconds
-	Pause    int // in milliseconds
+	Pitch  int // 0-11
+	Octave int // 0-8
 }
 
-func (n Note) ToFD() FreqDur {
-	// Convert note to frequency and duration
-	freq := NoteToFreq(n.Pitch, n.Octave)
-	return FreqDur{freq, n.Duration}
+func (n *Note) ToFreq() float64 {
+	return 440.0 * math.Pow(2, float64(n.Pitch+(n.Octave+1)*12-69)/12.0)
 }
 
-var notes = []Note{
-	{NOTE_C, 5, 300, 100},
-	{NOTE_G, 4, 150, 50},
-	{NOTE_G, 4, 150, 50},
-	{NOTE_A, 4, 300, 100},
-	{NOTE_G, 4, 400, 400},
-	{NOTE_B, 4, 300, 100},
-	{NOTE_C, 5, 500, 0},
+// map keyboard keys to MIDI notes
+var keyToNote = map[string]Note{
+	"a":  {NOTE_C, 4},
+	"w":  {NOTE_Cs, 4},
+	"s":  {NOTE_D, 4},
+	"e":  {NOTE_Ds, 4},
+	"d":  {NOTE_E, 4},
+	"f":  {NOTE_F, 4},
+	"t":  {NOTE_Fs, 4},
+	"g":  {NOTE_G, 4},
+	"y":  {NOTE_Gs, 4},
+	"h":  {NOTE_A, 4},
+	"u":  {NOTE_As, 4},
+	"j":  {NOTE_B, 4},
+	"k":  {NOTE_C, 5},
+	"o":  {NOTE_Cs, 5},
+	"l":  {NOTE_D, 5},
+	"p":  {NOTE_Ds, 5},
+	";":  {NOTE_E, 5},
+	"[":  {NOTE_Fs, 5},
+	"'":  {NOTE_F, 5},
+	"]":  {NOTE_G, 5},
+	"\\": {NOTE_Gs, 5},
 }
 
-type FreqDur struct {
-	Freq     float64 // frequency in Hz
-	Duration int     // duration in milliseconds
-}
-
-type NoteMaker struct {
-	Running   bool
-	RunningMu sync.Mutex
-	Ch        chan FreqDur
-}
-
-func (n *NoteMaker) Start() {
-	// start a goroutine to play the notes
-	n.RunningMu.Lock()
-	defer n.RunningMu.Unlock()
-	if n.Running {
-		return
-	}
-	n.Running = true
-	go func() {
-		for _, note := range notes {
-			// convert note to frequency and duration
-			fd := note.ToFD()
-			n.Ch <- fd
-			time.Sleep(time.Duration(note.Duration) * time.Millisecond)
-			time.Sleep(time.Duration(note.Pause) * time.Millisecond)
-		}
-		// set the running flag to false when done
-		n.RunningMu.Lock()
-		defer n.RunningMu.Unlock()
-		n.Running = false
-	}()
-
-}
-
-// NewNoteMaker creates a new NoteMaker instance with a channel for frequency and duration.
-func NewNoteMaker() *NoteMaker {
-	return &NoteMaker{
-		Ch: make(chan FreqDur),
-	}
+// GetNote returns the note for the given key.
+func GetNote(key string) (Note, bool) {
+	note, ok := keyToNote[key]
+	return note, ok
 }

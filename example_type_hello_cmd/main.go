@@ -35,6 +35,7 @@ func main() {
 			fmt.Println("Event received:", event)
 			switch event.(type) {
 			case nvda_remote_go.ClientJoinedPacket:
+				// do the task in a goroutine to prevent channel queueing
 				go func() {
 					fmt.Println("Someone joined the session")
 					remote.SendKeystroke("win+R")
