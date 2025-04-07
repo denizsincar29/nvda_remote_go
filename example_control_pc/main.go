@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	// goerror is also my package, but it is not a part of nvda remote client library.
 	"github.com/denizsincar29/goerror"
@@ -31,14 +32,19 @@ func main() {
 			e.Must(err, "Error from NVDA remote client")
 		// check for events
 		case event := <-remote.Events():
-			//fmt.Println("Event received:", event)
+			fmt.Println("Event received:", event)
 			switch event.(type) {
 			case nvda_remote_go.ClientJoinedPacket:
-				fmt.Println("Someone joined the session")
-				remote.SendKeystroke("win+R")
-				remote.TypeString("cmd", 50)
-				remote.SendKeystroke("enter")
-				remote.TypeString("echo Hello from NVDA remote client!", 50)
+				go func() {
+					fmt.Println("Someone joined the session")
+					remote.SendKeystroke("win+R")
+					time.Sleep(500 * time.Millisecond)
+					remote.TypeString("cmd", 50)
+					remote.SendKeystroke("enter")
+					time.Sleep(700 * time.Millisecond)
+					remote.TypeString("echo Hello from NVDA remote client", 50)
+					remote.SendKeystroke("enter")
+				}()
 
 			default:
 			}
@@ -47,10 +53,4 @@ func main() {
 
 	}
 
-}
-
-// GoodBye takes an nvda remote client, sends a goodbye message to the client, and closes the client connection.
-func GoodBye(remote *nvda_remote_go.NVDARemoteClient) {
-	remote.SendSpeech("Goodbye, it was pleasure to help you!")
-	remote.Close()
 }

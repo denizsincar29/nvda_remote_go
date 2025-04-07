@@ -218,10 +218,10 @@ func ResumeSpeech() PauseSpeechPacket {
 // BeepPacket is the event that is sent when the server sends a beep command.
 type BeepPacket struct {
 	BasePacket
-	Hz     int `json:"hz"`
-	Length int `json:"length"`
-	Left   int `json:"left"`
-	Right  int `json:"right"`
+	Hz     float64 `json:"hz"`
+	Length int     `json:"length"`
+	Left   int     `json:"left"`
+	Right  int     `json:"right"`
 }
 
 func (b BeepPacket) String() string {
@@ -233,7 +233,7 @@ func (b BeepPacket) String() string {
 	}
 }
 
-func NewBeepPacket(hz int, length int, args ...int) BeepPacket {
+func NewBeepPacket(hz float64, length int, args ...int) BeepPacket {
 	left := 50
 	right := 50
 	if len(args) > 0 {
@@ -338,6 +338,10 @@ func NewKeyPacketRaw(vkCode int, scanCode *int, extended *bool, pressed bool) Ke
 }
 
 func NewKeyPacket(key string, pressed bool) (KeyPacket, error) {
+	// if key is " ", convert it to "space"
+	if key == " " {
+		key = "space"
+	}
 	key_info, err := keys.GetKeyInfo(key)
 	if err != nil {
 		return KeyPacket{}, err

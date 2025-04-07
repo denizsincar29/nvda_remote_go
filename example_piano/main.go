@@ -48,7 +48,7 @@ func main() {
 				logger.Info("Channel closed, strange!")
 				return
 			}
-			remote.SendBeep(int(note.Freq), note.Duration)
+			remote.SendBeep(note.Freq, note.Duration)
 		}
 
 	}

@@ -40,9 +40,9 @@ func NewClient(host, port, channel, connType string, lgr *slog.Logger) (*NVDARem
 
 	client := &NVDARemoteClient{
 		conn:      conn,
-		eventChan: make(chan Packet, 100),
+		eventChan: make(chan Packet, 1000),
 		sendChan:  make(chan []byte, 100),
-		errorChan: make(chan error, 10),
+		errorChan: make(chan error),
 		closeChan: make(chan struct{}),
 		logger:    lgr,
 	}
@@ -171,7 +171,7 @@ func (c *NVDARemoteClient) PauseSpeech(switchVal bool) {
 }
 
 // SendBeep sends a beep command to the NVDA remote client.
-func (c *NVDARemoteClient) SendBeep(hz int, length int, left ...int) {
+func (c *NVDARemoteClient) SendBeep(hz float64, length int, left ...int) {
 	leftVol := 50
 	rightVol := 50
 
