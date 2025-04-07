@@ -6,19 +6,21 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net"
+	"strings"
 	"sync"
+	"time"
 )
 
 const DEFAULT_PORT = "6837"
 
 type NVDARemoteClient struct {
 	conn         *tls.Conn
-	eventChan    chan Event
+	eventChan    chan Packet
 	sendChan     chan []byte
 	errorChan    chan error
 	closeChan    chan struct{}
 	wg           sync.WaitGroup
-	eventHandler func(Event)
+	eventHandler func(Packet)
 	logger       *slog.Logger
 }
 
@@ -38,7 +40,7 @@ func NewClient(host, port, channel, connType string, lgr *slog.Logger) (*NVDARem
 
 	client := &NVDARemoteClient{
 		conn:      conn,
-		eventChan: make(chan Event, 100),
+		eventChan: make(chan Packet, 100),
 		sendChan:  make(chan []byte, 100),
 		errorChan: make(chan error, 10),
 		closeChan: make(chan struct{}),
@@ -48,16 +50,10 @@ func NewClient(host, port, channel, connType string, lgr *slog.Logger) (*NVDARem
 	client.wg.Add(2)
 	go client.readLoop()
 	go client.writeLoop()
-
-	client.Send(map[string]interface{}{
-		"type":    "protocol_version",
-		"version": 2,
-	})
-	client.Send(map[string]interface{}{
-		"type":            "join",
-		"channel":         channel,
-		"connection_type": connType,
-	})
+	handshake, joinpacket := NewJoinPackets(channel, connType)
+	client.logger.Debug("Sending handshake and join packet", "handshake", handshake, "joinpacket", joinpacket)
+	client.Send(handshake)
+	client.Send(joinpacket)
 
 	return client, nil
 }
@@ -78,13 +74,13 @@ func (c *NVDARemoteClient) readLoop() {
 			}
 			// debug log
 			c.logger.Debug("Received data", "data", string(data))
-			event, err := ParseEvent(data)
+			event, err := ParsePacket(data)
 			if err != nil {
 				c.errorChan <- err
 				continue
 			}
 			// if it's a ping event, don't send it to the event channel
-			if _, ok := event.(*PingEvent); ok {
+			if _, ok := event.(*PingPacket); ok {
 				continue
 			}
 			if c.eventHandler != nil {
@@ -113,7 +109,7 @@ func (c *NVDARemoteClient) writeLoop() {
 	}
 }
 
-func (c *NVDARemoteClient) Send(data map[string]interface{}) error {
+func (c *NVDARemoteClient) Send(data Packet) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -131,11 +127,11 @@ func (c *NVDARemoteClient) Close() {
 	close(c.errorChan)
 }
 
-func (c *NVDARemoteClient) SetEventHandler(handler func(Event)) {
+func (c *NVDARemoteClient) SetEventHandler(handler func(Packet)) {
 	c.eventHandler = handler
 }
 
-func (c *NVDARemoteClient) Events() <-chan Event {
+func (c *NVDARemoteClient) Events() <-chan Packet {
 	return c.eventChan
 }
 
@@ -144,35 +140,34 @@ func (c *NVDARemoteClient) Errors() <-chan error {
 }
 
 // SendSpeech sends a speech command to the NVDA remote client.
-func (c *NVDARemoteClient) SendSpeech(sequence string, args ...int) {
+func (c *NVDARemoteClient) SendRawSpeech(sequence []interface{}, args ...int) {
 	// default priority is 0
 	priority := 0
 	if len(args) > 0 {
 		priority = args[0]
 	}
 	// self.send(type="speak", sequence=sequence, priority=priority)
-	c.Send(map[string]interface{}{
-		"type":     "speak",
-		"sequence": sequence,
-		"priority": priority,
-	})
+	c.Send(NewSpeakPacket(sequence, priority))
+}
+
+// SendSpeech sends a speech command to the NVDA remote client.
+func (c *NVDARemoteClient) SendSpeech(text string, args ...int) {
+	// default priority is 0
+	priority := 0
+	if len(args) > 0 {
+		priority = args[0]
+	}
+	c.Send(NewSpeakPacket([]interface{}{text}, priority))
 }
 
 // CancelSpeech cancels the current speech.
 func (c *NVDARemoteClient) CancelSpeech() {
-	// self.send(type="cancel_speech")
-	c.Send(map[string]interface{}{
-		"type": "cancel_speech",
-	})
+	c.Send(NewCancelSpeechPacket())
 }
 
 // PauseSpeech pauses or resumes speech.
 func (c *NVDARemoteClient) PauseSpeech(switchVal bool) {
-	// self.send(type="pause_speech", switch=switch)
-	c.Send(map[string]interface{}{
-		"type":   "pause_speech",
-		"switch": switchVal,
-	})
+	c.Send(NewPauseSpeechPacket(switchVal))
 }
 
 // SendBeep sends a beep command to the NVDA remote client.
@@ -187,31 +182,117 @@ func (c *NVDARemoteClient) SendBeep(hz int, length int, left ...int) {
 	if len(left) > 1 {
 		rightVol = left[1]
 	}
+	c.Send(NewBeepPacket(hz, length, leftVol, rightVol))
 
-	// self.send(type="tone", hz=hz, length=length, left=left, right=right)
-	c.Send(map[string]interface{}{
-		"type":   "tone",
-		"hz":     hz,
-		"length": length,
-		"left":   leftVol,
-		"right":  rightVol,
-	})
 }
 
 // Wave sends a wave command to the NVDA remote client.
 func (c *NVDARemoteClient) Wave(kwargs map[string]interface{}) {
-	// self.send(type="wave", kwargs=kwargs)
-	c.Send(map[string]interface{}{
-		"type":   "wave",
-		"kwargs": kwargs,
-	})
+	c.Send(NewWavePacket(kwargs))
 }
 
 // SendBraille sends braille data to the NVDA remote client.
 func (c *NVDARemoteClient) SendBraille(data string) {
-	// self.send(type="braille", data=data)
-	c.Send(map[string]interface{}{
-		"type": "braille",
-		"data": data,
-	})
+	c.Send(NewSendBraillePacket(data))
+}
+
+// SendRawKey sends a key event to the NVDA remote client.
+func (c *NVDARemoteClient) SendRawKey(vkCode int, scanCode *int, extended *bool, pressed bool) {
+	c.Send(NewKeyPacketRaw(vkCode, scanCode, extended, pressed))
+}
+
+// SendKey sends a key event to the NVDA remote client.
+func (c *NVDARemoteClient) SendKey(key string, pressed bool) {
+	// log the key event
+	c.logger.Debug("Sending key event", "key", key, "pressed", pressed)
+	keyPacket, err := NewKeyPacket(key, pressed)
+	if err != nil {
+		c.logger.Error("Error creating key packet", "error", err)
+		c.errorChan <- err
+		return
+	}
+	c.Send(keyPacket)
+}
+
+// TypeString types a string on the NVDA remote client.
+func (c *NVDARemoteClient) TypeString(s string, delay int) {
+	for _, r := range s {
+		c.SendKey(string(r), true)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+		c.SendKey(string(r), false)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+	}
+
+}
+
+func (c *NVDARemoteClient) sendKeystrokeHelper(key string, ctrl, shift, alt, win, insert bool) {
+	// send all modifyers first
+	if ctrl {
+		c.SendKey("control", true)
+	}
+	if shift {
+		c.SendKey("shift", true)
+	}
+	if alt {
+		c.SendKey("alt", true)
+	}
+	if win {
+		c.SendKey("leftWindows", true)
+	}
+	if insert {
+		c.SendKey("insert", true)
+	}
+	// send the key
+	c.SendKey(key, true)
+	time.Sleep(50 * time.Millisecond)
+	c.SendKey(key, false)
+	// release all modifyers in reverse order
+	if insert {
+		c.SendKey("insert", false)
+	}
+	if win {
+		c.SendKey("leftWindows", false)
+	}
+	if alt {
+		c.SendKey("alt", false)
+	}
+	if shift {
+		c.SendKey("shift", false)
+	}
+	if ctrl {
+		c.SendKey("control", false)
+	}
+}
+
+// SendKeystroke sends a keystroke to the NVDA remote client.
+func (c *NVDARemoteClient) SendKeystroke(keystroke string) {
+	// split by +
+	parts := strings.Split(keystroke, "+")
+	if len(parts) == 0 {
+		return
+	}
+	key := parts[len(parts)-1]
+	parts = parts[:len(parts)-1]
+	ctrl := false
+	shift := false
+	alt := false
+	win := false
+	insert := false
+	for _, part := range parts {
+		switch part {
+		case "control", "ctrl":
+			ctrl = true
+		case "shift":
+			shift = true
+		case "alt":
+			alt = true
+		case "windows", "win":
+			win = true
+		case "insert", "ins":
+			insert = true
+		default:
+			c.logger.Warn("Unknown modifier", "modifier", part)
+		} // end switch
+	}
+	c.sendKeystrokeHelper(key, ctrl, shift, alt, win, insert)
 }

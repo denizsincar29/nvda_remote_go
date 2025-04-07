@@ -1,3 +1,7 @@
+// this is a main package for an NVDA remote client library.
+// It fully replicates the functionality of NVDA remote support add-on
+// you can control an NVDA remote user's pc or control a virtual program from your nvda
+// just like you help a friend with teamviewer or any other remote support software.
 package main
 
 import (
@@ -15,13 +19,11 @@ func main() {
 	e := goerror.NewError(logger)
 	key := GetKey()
 	// create a new nvda remote client
-	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "slave", logger)
+	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "master", logger)
 	e.Must(err, "Failed to create NVDA remote client")
-	// defer remote.Close()  // we'd do this, but lets defer goodbye instead
-	defer GoodBye(remote)
+	defer remote.Close()
+
 	logger.Info("Connected to NVDA remote client")
-	notemaker := NewNoteMaker()
-	notch := notemaker.Ch
 	for {
 		// check error channel for errors
 		select {
@@ -29,26 +31,18 @@ func main() {
 			e.Must(err, "Error from NVDA remote client")
 		// check for events
 		case event := <-remote.Events():
-			fmt.Println("Event received:", event)
-			switch e := event.(type) {
-			case nvda_remote_go.KeyPacket:
-				key, err := e.GetKey()
-				if err != nil {
-					logger.Error("Failed to get key from event", "error", err)
-					continue
-				}
-				if e.Pressed && key == "space" {
-					notemaker.Start()
-				}
+			//fmt.Println("Event received:", event)
+			switch event.(type) {
 			case nvda_remote_go.ClientJoinedPacket:
-				notemaker.Start()
+				fmt.Println("Someone joined the session")
+				remote.SendKeystroke("win+R")
+				remote.TypeString("cmd", 50)
+				remote.SendKeystroke("enter")
+				remote.TypeString("echo Hello from NVDA remote client!", 50)
+
+			default:
 			}
-		case note, ok := <-notch:
-			if !ok {
-				logger.Info("Channel closed, strange!")
-				return
-			}
-			remote.SendBeep(int(note.Freq), note.Duration)
+			// no error, continue
 		}
 
 	}
