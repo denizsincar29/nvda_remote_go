@@ -381,6 +381,14 @@ func (s SetClipboardTextPacket) String() string {
 	return fmt.Sprintf("Set clipboard text: %s", s.Text)
 }
 
+func NewSetClipboardTextPacket(text string) SetClipboardTextPacket {
+	return SetClipboardTextPacket{
+		BasePacket: BasePacket{PacketType: "set_clipboard_text"},
+		Text:       text,
+		Origin:     nil,
+	}
+}
+
 // SendSAS is the event that is sent when the client sends send ctrl+alt+del command.
 type SendSASPacket struct {
 	BasePacket
@@ -389,6 +397,13 @@ type SendSASPacket struct {
 
 func (s SendSASPacket) String() string {
 	return "Send SAS event"
+}
+
+func NewSendSASPacket() SendSASPacket {
+	return SendSASPacket{
+		BasePacket: BasePacket{PacketType: "send_SAS"},
+		Origin:     nil,
+	}
 }
 
 // PingPacket is the event that is sent when the server sends a ping command.
