@@ -73,7 +73,7 @@ func (c *NVDARemoteClient) readLoop() {
 	defer c.signalClose() // Signal that this goroutine is done
 
 	tempBuffer := make([]byte, 1024) // Temporary buffer for reading
-	buffer := make([]byte, 0, 1024)  // Main buffer (length 0, capacity 1024)
+	buffer := make([]byte, 0, 16384) // Main buffer for storing data
 
 	for {
 		select {
