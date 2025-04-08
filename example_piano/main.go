@@ -1,3 +1,7 @@
+// this example shows how to make a simple piano using nvda remote client library.
+// Connect your NVDA remote addon and this example app to the same server and run this example app.
+// For this to work, nvda connects as a master.
+// You press a key, and instantly receive a beep sound of the corresponding note.
 package main
 
 import (

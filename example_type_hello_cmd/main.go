@@ -1,7 +1,4 @@
-// this is a main package for an NVDA remote client library.
-// It fully replicates the functionality of NVDA remote support add-on
-// you can control an NVDA remote user's pc or control a virtual program from your nvda
-// just like you help a friend with teamviewer or any other remote support software.
+// This is an example of how to use the nvda remote client library to type "Hello from NVDA remote client" in a command prompt window when someone joins the session.
 package main
 
 import (

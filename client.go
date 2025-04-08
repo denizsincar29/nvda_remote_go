@@ -1,3 +1,11 @@
+// This package provides a client for the NVDA remote protocol, allowing you to connect to an NVDA remote server and send commands or receive events.
+// NVDA remote is an addon for NVDA (NonVisual Desktop Access), a screen reader for Windows. It allows you to help other NVDA users by letting them share there speech output and streaming keyboard presses to the remote client.
+// This app works through a server. The most popular server is nvdaremote.com.
+// Both clients connect to the same server, one as a controller and the other as a controled client.
+// The controller sends key presses to the controlled client and receives speech output from it.
+// with this library you can create nvda remote clients for any OSes, allowing not only NVDA users to help each other, but also other screen readers users to help NVDA users.
+// Also you can make games and other applications that use NVDA remote protocol to send speech output and receive key presses from the user.
+// This library is not affiliated with NVDA or nvdaremote.com in any way. It is just a client for the NVDA remote protocol.
 package nvda_remote_go
 
 import (
