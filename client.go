@@ -18,6 +18,7 @@ type NVDARemoteClient struct {
 	sendChan     chan []byte
 	errorChan    chan error
 	closeChan    chan struct{}
+	closeOnce    sync.Once
 	wg           sync.WaitGroup
 	eventHandler func(Packet)
 	logger       *slog.Logger
@@ -43,6 +44,8 @@ func NewClient(host, port, channel, connType string, lgr *slog.Logger) (*NVDARem
 		sendChan:  make(chan []byte, 100),
 		errorChan: make(chan error),
 		closeChan: make(chan struct{}),
+		wg:        sync.WaitGroup{},
+		closeOnce: sync.Once{},
 		logger:    lgr,
 	}
 
@@ -57,56 +60,73 @@ func NewClient(host, port, channel, connType string, lgr *slog.Logger) (*NVDARem
 	return client, nil
 }
 
+// signalClose signals that the client is closing. It uses a sync.Once to ensure that the close channel is only closed once.
+func (c *NVDARemoteClient) signalClose() {
+	// sends to close channel only once
+	c.closeOnce.Do(func() {
+		close(c.closeChan)
+	})
+}
+
 func (c *NVDARemoteClient) readLoop() {
 	defer c.wg.Done()
-	err := c.conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
-	if err != nil {
-		c.errorChan <- err
-		return
-	}
-	buffer := make([]byte, 0, 1024)
+	defer c.signalClose() // Signal that this goroutine is done
+
+	tempBuffer := make([]byte, 1024) // Temporary buffer for reading
+	buffer := make([]byte, 0, 1024)  // Main buffer (length 0, capacity 1024)
+
 	for {
 		select {
 		case <-c.closeChan:
 			return
 		default:
-			// read data from the connection
-			_, err := c.conn.Read(buffer[:cap(buffer)])
-			if err != nil && !strings.Contains(err.Error(), "timeout") {
-				c.logger.Error("Error reading from connection", "error", err)
-				c.errorChan <- err
-			}
-			// find the first new line character
-			newLineIndex := strings.Index(string(buffer), "\n")
-			if newLineIndex == -1 {
-				continue
-			}
-			// read the data up to the new line character and remove it from the buffer
-			data := buffer[:newLineIndex]
-			buffer = buffer[newLineIndex+1:]
-			c.logger.Debug("Received data", "data", string(data))
-			event, err := ParsePacket(data)
+			c.conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond)) // Reset deadline
+
+			n, err := c.conn.Read(tempBuffer)
 			if err != nil {
-				c.errorChan <- err
-				continue
-			}
-			// if it's a ping event, don't send it to the event channel
-			if _, ok := event.(*PingPacket); ok {
-				continue
-			}
-			if c.eventHandler != nil {
-				c.eventHandler(event)
-			} else {
-				c.eventChan <- event
+				if !strings.Contains(err.Error(), "timeout") {
+					c.logger.Error("Error reading from connection", "error", err)
+					c.errorChan <- err
+				}
+				continue // or consider more drastic action if it's a fatal error
 			}
 
+			// Append to the main buffer
+			buffer = append(buffer, tempBuffer[:n]...)
+
+			for { // Process multiple packets in one read
+				newLineIndex := strings.Index(string(buffer), "\n")
+				if newLineIndex == -1 {
+					break // No more complete packets
+				}
+
+				data := buffer[:newLineIndex]
+				buffer = buffer[newLineIndex+1:]
+
+				c.logger.Debug("Received data", "data", string(data))
+				event, err := ParsePacket(data)
+				if err != nil {
+					c.errorChan <- err
+					continue
+				}
+
+				if _, ok := event.(*PingPacket); ok {
+					continue
+				}
+
+				if c.eventHandler != nil {
+					c.eventHandler(event)
+				} else {
+					c.eventChan <- event
+				}
+			}
 		}
 	}
 }
 
 func (c *NVDARemoteClient) writeLoop() {
 	defer c.wg.Done()
-
+	defer c.signalClose() // Signal that this goroutine is done
 	for {
 		select {
 		case <-c.closeChan:
@@ -131,9 +151,10 @@ func (c *NVDARemoteClient) Send(data Packet) error {
 }
 
 func (c *NVDARemoteClient) Close() {
-	close(c.closeChan)
-	c.conn.Close()
+	c.logger.Debug("Closing NVDA remote client")
+	c.signalClose() // Signal that the client is closing
 	c.wg.Wait()
+	c.conn.Close() // Close the connection now, after all goroutines are done
 	close(c.eventChan)
 	close(c.sendChan)
 	close(c.errorChan)
