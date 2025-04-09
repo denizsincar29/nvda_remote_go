@@ -15,7 +15,7 @@ func replAttr(_ []string, a slog.Attr) slog.Attr {
 // NewLogger creates a new logger with the given options.
 func NewLogger(writer io.Writer) *slog.Logger {
 	opts := slog.HandlerOptions{
-		AddSource:   false,
+		AddSource:   true,
 		Level:       slog.LevelDebug,
 		ReplaceAttr: replAttr,
 	}

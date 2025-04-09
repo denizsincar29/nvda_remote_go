@@ -18,10 +18,29 @@ func main() {
 	e := goerror.NewError(logger)
 	key := GetKey()
 	// create a new nvda remote client
-	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "slave", logger)
+	remote, err := nvda_remote_go.NewClientBuilder().
+		WithHost("nvdaremote.ru").
+		WithChannel(key).
+		AsSlave().
+		WithLogger(logger).
+		Build()
 	e.Must(err, "Failed to create NVDA remote client")
 	// defer remote.Close()  // we'd do this, but lets defer goodbye instead
 	defer GoodBye(remote)
+	err = remote.CheckServer()
+	e.Must(err, "Failed to check server verification")
+	if !remote.State().IsTrusted() {
+		if remote.VerificationStatus().IsUnknown() {
+			logger.Warn("Permanently trusting server", "fingerprint", remote.ServerFingerprint())
+			err = remote.Trust()
+			e.Must(err, "Failed to trust server")
+		} else {
+			logger.Warn("Server verification error", "status", remote.VerificationStatus().StatusMessage())
+			return
+		}
+	}
+	err = remote.Connect()
+	e.Must(err, "Failed to connect to NVDA remote client")
 	logger.Info("Connected to NVDA remote client")
 	ticker := time.NewTicker(5 * time.Second)
 	for {
@@ -34,8 +53,6 @@ func main() {
 			fmt.Println("Event received:", event)
 		case <-ticker.C:
 			remote.SendSpeech("Hello, nvda user! I'm a fake nvda remote client.")
-		default:
-			// no error, continue
 		}
 
 	}
