@@ -12,6 +12,7 @@ import (
 	// goerror is also my package, but it is not a part of nvda remote client library.
 	"github.com/denizsincar29/goerror"
 	"github.com/denizsincar29/nvda_remote_go"
+	"github.com/denizsincar29/nvda_remote_go/fingerprints"
 )
 
 func beepFreqToProgress(beepFreq int) int {
@@ -26,7 +27,10 @@ func main() {
 	e := goerror.NewError(logger)
 	key := GetKey()
 	// create a new nvda remote client
-	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "master", logger)
+	fmConfig := fingerprints.Config{Directory: "", AppName: "NVDARemoteExamples"}
+	fm, err := fingerprints.NewFingerprintManager(fmConfig)
+	e.Must(err, "Failed to create fingerprint manager")
+	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "master", logger, fm)
 	e.Must(err, "Failed to create NVDA remote client")
 	defer remote.Close()
 
