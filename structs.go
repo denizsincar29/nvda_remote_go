@@ -416,6 +416,16 @@ func (p PingPacket) String() string {
 	return "Ping event"
 }
 
+// NvdaNotConnectedPacket is the event indicating the remote computer on the other side is not connected
+// this event is only sent by the server to indicate that the remote computer is not connected
+type NvdaNotConnectedPacket struct {
+	BasePacket
+}
+
+func (n NvdaNotConnectedPacket) String() string {
+	return "nvda_not_connected event"
+}
+
 // HandShakePacket is the package that client sends to the server when it connects.
 type HandShakePacket struct {
 	BasePacket
@@ -534,6 +544,8 @@ func ParsePacket(data []byte) (Packet, error) {
 		return e, err
 	case "ping":
 		return PingPacket{BasePacket: base}, nil
+	case "nvda_not_connected":
+		return NvdaNotConnectedPacket{BasePacket: base}, nil
 	default:
 		return InvalidPacket{
 			BasePacket: base,
