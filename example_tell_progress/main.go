@@ -27,8 +27,7 @@ func main() {
 	e := goerror.NewError(logger)
 
 	// Load configuration from .env file
-	config, err := exampleconfig.Load()
-	e.Must(err, "Failed to load configuration")
+	config := exampleconfig.Load()
 
 	// create a new nvda remote client
 	remote, err := nvda_remote_go.NewClient(config.Host, config.Port, config.Key, "master", logger)

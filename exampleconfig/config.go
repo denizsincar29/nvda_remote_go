@@ -5,6 +5,7 @@ package exampleconfig
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -26,7 +27,7 @@ const (
 // Load loads configuration from .env file and environment variables.
 // If the key is not found, it prompts the user to enter it and saves it to key.txt.
 // Returns a Config struct with Key, Host, and Port.
-func Load() (*Config, error) {
+func Load() *Config {
 	// Load .env file if it exists (ignore error if file doesn't exist)
 	_ = godotenv.Load()
 
@@ -36,7 +37,7 @@ func Load() (*Config, error) {
 		Port: getPort(),
 	}
 
-	return config, nil
+	return config
 }
 
 // getKey returns the key from environment variable, key.txt file, or prompts the user.
@@ -49,7 +50,7 @@ func getKey() string {
 	// Try to read from key.txt
 	key, err := os.ReadFile("key.txt")
 	if err == nil && len(key) > 0 {
-		return string(key)
+		return strings.TrimSpace(string(key))
 	}
 
 	// Prompt user for key
