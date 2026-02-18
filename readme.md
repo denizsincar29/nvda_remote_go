@@ -11,6 +11,9 @@ Additionally both clients can send eachother his clipboard.
 ## What is this library for?
 This library is an NVDA remote client written in Go. It allows you to connect to an NVDA remote server as a controller or a target. It can send all kinds of messages to the server that are relayed to the target or controller, respectively. It can also receive messages from the server and process them accordingly.
 
+### Virtual GUI (vgui) Module
+The library includes a powerful **vgui** (virtual GUI) package that enables creating accessible remote interfaces. With vgui, you can build virtual GUI elements (buttons, listboxes, checkboxes) that are navigated via keyboard and spoken to the user through NVDA remote protocol. This is perfect for creating remote configuration interfaces, menus, forms, and interactive applications. See the [vgui documentation](vgui/README.md) and [example_vgui](example_vgui/) for details.
+
 ## Purpose of this library
 This library is intended to be used by developers who want to create applications that can interact with NVDA remote. It provides a simple and easy-to-use interface for sending and receiving messages, as well as handling errors and other events.
 Personally, I created this library for fun, to explore the protocol and make little experiments with it. All my experiments are in the repo, feal free to check them out.
