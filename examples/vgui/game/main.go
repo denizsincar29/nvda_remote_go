@@ -80,6 +80,10 @@ func main() {
 			return "Invalid guess"
 		}
 
+		// Clear input immediately after parsing
+		inputBox.Text = ""
+		inputBox.CursorPos = 0
+
 		attempts++
 		attemptsLabel.Name = fmt.Sprintf("Attempts: %d / %d", attempts, maxAttempts)
 
@@ -137,10 +141,6 @@ func main() {
 			
 			return fmt.Sprintf("Game over! The number was %d", targetNumber)
 		}
-
-		// Clear input for next guess
-		inputBox.Text = ""
-		inputBox.CursorPos = 0
 
 		return "Guess submitted"
 	}
