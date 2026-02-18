@@ -131,7 +131,7 @@ manager.CloseWindow("dialog")
   - [ ] Selection support
 - [ ] Screen reader announcements:
   - [ ] Announce characters when navigating (e.g., "a", "b", "c")
-  - [ ] Announce "blank" for spaces
+  - [ ] Announce "space" for spaces, "blank" for end of line or end of text or empty text
   - [ ] Announce words on Ctrl+Left/Right navigation
   - [ ] Announce cursor position
   - [ ] Announce selected text
