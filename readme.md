@@ -91,6 +91,7 @@ All examples now use a common configuration mechanism that loads settings from `
 - ./example_piano - an example target client that receives key press events and sends a beep with a frequency based on the key that was pressed. This example caused me believe that Go is fast! My previous implementation in python was slow, the beep feetback was delayed. Now, it is instant!
 - ./example_type_hello_cmd - an example controller client that waits for a target to join, then sends key win+r, cmd, enter, echo hello, enter to the target. This example caused a lot of fun with deadlocks and sleepy goroutines, but finally i fixed it.
 - ./example_tell_progress - an example controller client that receives beep events from the target, converts them to a progress bar percentage and logs it to the console. It works only if you set progress bar announcements to beeps or beeps+speech in your NVDA settings.
+- ./example_vgui - an example slave client that demonstrates the virtual GUI (vgui) framework. It creates a form with listboxes, checkboxes, and buttons that can be navigated using Tab key and activated with Enter/Space. Perfect for creating remote accessible interfaces!
 
 ## Usage
 The usage of this library is described in the [usage](usage.md) file. Check it out for more details on how to use the library and its features.
