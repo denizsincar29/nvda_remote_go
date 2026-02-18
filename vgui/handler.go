@@ -118,8 +118,17 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 	// Track modifier key states
 	if key == "shift" || key == "leftShift" || key == "rightShift" {
 		h.mu.Lock()
+		wasAltPressed := h.altPressed
 		h.shiftPressed = event.Pressed
 		h.mu.Unlock()
+		
+		// Check for Alt+Shift combination to switch keyboard layout
+		if event.Pressed && wasAltPressed {
+			newLayout := h.gui.SwitchKeyboardLayout()
+			layoutName := h.gui.GetKeyboardLayoutName(newLayout)
+			h.logger.Info("Keyboard layout switched", "layout", layoutName)
+			h.client.SendSpeech("Layout: " + layoutName)
+		}
 		return // Don't process modifier key itself
 	}
 	
@@ -132,8 +141,17 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 	
 	if key == "alt" || key == "leftAlt" || key == "rightAlt" {
 		h.mu.Lock()
+		wasShiftPressed := h.shiftPressed
 		h.altPressed = event.Pressed
 		h.mu.Unlock()
+		
+		// Check for Alt+Shift combination to switch keyboard layout
+		if event.Pressed && wasShiftPressed {
+			newLayout := h.gui.SwitchKeyboardLayout()
+			layoutName := h.gui.GetKeyboardLayoutName(newLayout)
+			h.logger.Info("Keyboard layout switched", "layout", layoutName)
+			h.client.SendSpeech("Layout: " + layoutName)
+		}
 		return // Don't process modifier key itself
 	}
 	
