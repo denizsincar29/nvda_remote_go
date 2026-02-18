@@ -25,24 +25,26 @@ func WithLogger(logger *slog.Logger) GUIOption {
 
 // GUI represents a virtual GUI with multiple elements
 type GUI struct {
-	elements      []Element
-	focusIndex    int
-	mu            sync.RWMutex
-	onSpeech      func(text string) // Callback to send speech output
-	localizer     *Localizer
-	logger        *slog.Logger
-	defaultButton *Button // The default button (activated by Enter)
-	hotkeys       map[string]func() string // Hotkey map (e.g., "ctrl+s" -> callback)
+	elements       []Element
+	focusIndex     int
+	mu             sync.RWMutex
+	onSpeech       func(text string) // Callback to send speech output
+	localizer      *Localizer
+	logger         *slog.Logger
+	defaultButton  *Button // The default button (activated by Enter)
+	hotkeys        map[string]func() string // Hotkey map (e.g., "ctrl+s" -> callback)
+	keyboardLayout *KeyboardLayoutManager
 }
 
 // NewGUI creates a new virtual GUI with optional configuration
 func NewGUI(options ...GUIOption) *GUI {
 	g := &GUI{
-		elements:   make([]Element, 0),
-		focusIndex: -1,
-		localizer:  NewLocalizer(LocaleEnglish), // Default to English
-		logger:     slog.Default(),
-		hotkeys:    make(map[string]func() string),
+		elements:       make([]Element, 0),
+		focusIndex:     -1,
+		localizer:      NewLocalizer(LocaleEnglish), // Default to English
+		logger:         slog.Default(),
+		hotkeys:        make(map[string]func() string),
+		keyboardLayout: NewKeyboardLayoutManager(LayoutUS), // Default to US layout
 	}
 	
 	for _, option := range options {
@@ -293,16 +295,31 @@ func (g *GUI) HandleKeyWithModifiers(key string, modifiers []string, pressed boo
 		if ta, ok := focusedElem.(*TextArea); ok {
 			return ta.DeleteCharAfter()
 		}
+		
+	case "a":
+		// Ctrl+A: Select all
+		if hasModifier(modifiers, "ctrl") {
+			if tb, ok := focusedElem.(*TextBox); ok {
+				return tb.SelectAll()
+			}
+			if ta, ok := focusedElem.(*TextArea); ok {
+				return ta.SelectAll()
+			}
+		}
 	}
 	
 	// Handle character input for text elements
 	// Only accept character input if no modifiers (except Shift) are pressed
-	if len(key) == 1 && !hasModifier(modifiers, "ctrl") && !hasModifier(modifiers, "alt") {
-		if tb, ok := focusedElem.(*TextBox); ok {
-			return tb.InsertChar(rune(key[0]))
-		}
-		if ta, ok := focusedElem.(*TextArea); ok {
-			return ta.InsertChar(rune(key[0]))
+	if !hasModifier(modifiers, "ctrl") && !hasModifier(modifiers, "alt") {
+		// Check if this key can be mapped to a character in the current layout
+		shiftPressed := hasModifier(modifiers, "shift")
+		if char, ok := g.keyboardLayout.GetCharForKey(key, shiftPressed); ok {
+			if tb, ok := focusedElem.(*TextBox); ok {
+				return tb.InsertChar(char)
+			}
+			if ta, ok := focusedElem.(*TextArea); ok {
+				return ta.InsertChar(char)
+			}
 		}
 	}
 	
@@ -434,6 +451,35 @@ func (g *GUI) GetLocalizer() *Localizer {
 	defer g.mu.RUnlock()
 	
 	return g.localizer
+}
+
+// SwitchKeyboardLayout switches to the next keyboard layout
+func (g *GUI) SwitchKeyboardLayout() KeyboardLayout {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	
+	return g.keyboardLayout.SwitchLayout()
+}
+
+// SetKeyboardLayout sets a specific keyboard layout
+func (g *GUI) SetKeyboardLayout(layout KeyboardLayout) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	
+	g.keyboardLayout.SetLayout(layout)
+}
+
+// GetKeyboardLayout returns the current keyboard layout
+func (g *GUI) GetKeyboardLayout() KeyboardLayout {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	
+	return g.keyboardLayout.GetCurrentLayout()
+}
+
+// GetKeyboardLayoutName returns a human-readable name for a keyboard layout
+func (g *GUI) GetKeyboardLayoutName(layout KeyboardLayout) string {
+	return g.keyboardLayout.GetLayoutName(layout)
 }
 
 // String returns a string representation of the GUI

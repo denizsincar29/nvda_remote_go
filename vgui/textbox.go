@@ -1,6 +1,7 @@
 package vgui
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 )
@@ -61,7 +62,7 @@ func (t *TextBox) InsertChar(ch rune) string {
 	t.CursorPos++
 	
 	if t.OnChange != nil {
-		return t.OnChange(t.Text)
+		t.OnChange(t.Text)
 	}
 	
 	return string(ch)
@@ -225,7 +226,7 @@ func (t *TextBox) DeleteCharBefore() string {
 	t.CursorPos--
 	
 	if t.OnChange != nil {
-		return t.OnChange(t.Text)
+		t.OnChange(t.Text)
 	}
 	
 	return t.announceChar(deletedChar)
@@ -246,7 +247,7 @@ func (t *TextBox) DeleteCharAfter() string {
 	t.Text = string(text)
 	
 	if t.OnChange != nil {
-		return t.OnChange(t.Text)
+		t.OnChange(t.Text)
 	}
 	
 	return t.announceChar(deletedChar)
@@ -269,6 +270,22 @@ func (t *TextBox) announceChar(ch rune) string {
 	}
 	
 	return string(ch)
+}
+
+// SelectAll selects all text (moves cursor to end and announces selection)
+func (t *TextBox) SelectAll() string {
+	if t.Text == "" {
+		if t.localizer != nil {
+			return t.localizer.T("empty")
+		}
+		return "empty"
+	}
+	
+	t.CursorPos = len(t.Text)
+	textLen := len([]rune(t.Text))
+	
+	// For now, use English format. Proper localization would need a format string
+	return fmt.Sprintf("%d characters selected", textLen)
 }
 
 // SetCursorPosition sets the cursor position
@@ -360,6 +377,9 @@ func (t *TextArea) InsertChar(ch rune) string {
 		t.Row++
 		t.Col = 0
 		t.syncFromLines()
+		if t.OnChange != nil {
+			t.OnChange(t.Text)
+		}
 		return "new line"
 	}
 	
@@ -370,7 +390,7 @@ func (t *TextArea) InsertChar(ch rune) string {
 	t.syncFromLines()
 	
 	if t.OnChange != nil {
-		return t.OnChange(t.Text)
+		t.OnChange(t.Text)
 	}
 	
 	return string(ch)
@@ -498,7 +518,7 @@ func (t *TextArea) DeleteCharBefore() string {
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
-			return t.OnChange(t.Text)
+			t.OnChange(t.Text)
 		}
 		
 		return t.announceChar(deletedChar)
@@ -513,7 +533,7 @@ func (t *TextArea) DeleteCharBefore() string {
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
-			return t.OnChange(t.Text)
+			t.OnChange(t.Text)
 		}
 		
 		return "line joined"
@@ -536,7 +556,7 @@ func (t *TextArea) DeleteCharAfter() string {
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
-			return t.OnChange(t.Text)
+			t.OnChange(t.Text)
 		}
 		
 		return t.announceChar(deletedChar)
@@ -549,7 +569,7 @@ func (t *TextArea) DeleteCharAfter() string {
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
-			return t.OnChange(t.Text)
+			t.OnChange(t.Text)
 		}
 		
 		return "line joined"
@@ -650,4 +670,25 @@ func (t *TextArea) getCurrentWord() string {
 	}
 	
 	return word
+}
+
+// SelectAll selects all text (moves cursor to end and announces selection)
+func (t *TextArea) SelectAll() string {
+	if t.Text == "" {
+		if t.localizer != nil {
+			return t.localizer.T("empty")
+		}
+		return "empty"
+	}
+	
+	// Move to end of text
+	t.Row = len(t.lines) - 1
+	t.Col = len(t.lines[t.Row])
+	
+	// Count total characters
+	textLen := len([]rune(t.Text))
+	lineCount := len(t.lines)
+	
+	// For now, use English format. Proper localization would need a format string
+	return fmt.Sprintf("%d characters, %d lines selected", textLen, lineCount)
 }
