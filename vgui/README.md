@@ -121,7 +121,7 @@ gui.AddElement(label)
 The vgui package handles the following keyboard commands automatically:
 
 - **Tab**: Move focus to the next focusable element
-- **Shift+Tab**: Move focus to the previous focusable element (not yet implemented)
+- **Shift+Tab**: Move focus to the previous focusable element
 - **Enter**: Activate the focused element
 - **Space**: Activate the focused element (also toggles checkboxes)
 - **Up Arrow**: Navigate up in listboxes

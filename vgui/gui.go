@@ -7,19 +7,17 @@ import (
 
 // GUI represents a virtual GUI with multiple elements
 type GUI struct {
-	elements     []Element
-	focusIndex   int
-	mu           sync.RWMutex
-	onSpeech     func(text string) // Callback to send speech output
-	acceptingKey bool              // Whether the GUI is currently accepting key input
+	elements   []Element
+	focusIndex int
+	mu         sync.RWMutex
+	onSpeech   func(text string) // Callback to send speech output
 }
 
 // NewGUI creates a new virtual GUI
 func NewGUI() *GUI {
 	return &GUI{
-		elements:     make([]Element, 0),
-		focusIndex:   -1,
-		acceptingKey: true,
+		elements:   make([]Element, 0),
+		focusIndex: -1,
 	}
 }
 

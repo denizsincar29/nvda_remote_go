@@ -9,11 +9,12 @@ import (
 
 // Handler manages the connection between a virtual GUI and an NVDA remote client
 type Handler struct {
-	client *nvda_remote_go.NVDARemoteClient
-	gui    *GUI
-	logger *slog.Logger
-	mu     sync.RWMutex
-	active bool
+	client      *nvda_remote_go.NVDARemoteClient
+	gui         *GUI
+	logger      *slog.Logger
+	mu          sync.RWMutex
+	active      bool
+	shiftPressed bool // Track shift key state for Shift+Tab
 }
 
 // NewHandler creates a new vgui handler for the given NVDA remote client
@@ -111,6 +112,29 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 	}
 	
 	h.logger.Debug("Key event", "key", key, "pressed", event.Pressed)
+	
+	// Track shift key state for Shift+Tab detection
+	if key == "shift" || key == "leftShift" || key == "rightShift" {
+		h.mu.Lock()
+		h.shiftPressed = event.Pressed
+		h.mu.Unlock()
+		return // Don't process shift key itself
+	}
+	
+	// Handle Shift+Tab for backward navigation
+	if key == "tab" && event.Pressed {
+		h.mu.RLock()
+		shiftPressed := h.shiftPressed
+		h.mu.RUnlock()
+		
+		if shiftPressed {
+			// Shift+Tab: Move focus backward
+			if speechText := h.gui.MoveFocusBackward(); speechText != "" {
+				h.client.SendSpeech(speechText)
+			}
+			return
+		}
+	}
 	
 	// Let the GUI handle the key and get speech output
 	if speechText := h.gui.HandleKey(key, event.Pressed); speechText != "" {
