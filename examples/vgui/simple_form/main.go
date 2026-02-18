@@ -8,7 +8,7 @@ import (
 
 	"github.com/denizsincar29/goerror"
 	"github.com/denizsincar29/nvda_remote_go"
-	"github.com/denizsincar29/nvda_remote_go/exampleconfig"
+	exampleconfig "github.com/denizsincar29/nvda_remote_go/examples/shared/config"
 	"github.com/denizsincar29/nvda_remote_go/vgui"
 )
 

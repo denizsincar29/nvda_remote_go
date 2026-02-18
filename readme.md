@@ -12,7 +12,7 @@ Additionally both clients can send eachother his clipboard.
 This library is an NVDA remote client written in Go. It allows you to connect to an NVDA remote server as a controller or a target. It can send all kinds of messages to the server that are relayed to the target or controller, respectively. It can also receive messages from the server and process them accordingly.
 
 ### Virtual GUI (vgui) Module
-The library includes a powerful **vgui** (virtual GUI) package that enables creating accessible remote interfaces. With vgui, you can build virtual GUI elements (buttons, listboxes, checkboxes) that are navigated via keyboard and spoken to the user through NVDA remote protocol. This is perfect for creating remote configuration interfaces, menus, forms, and interactive applications. See the [vgui documentation](vgui/README.md) and [example_vgui](example_vgui/) for details.
+The library includes a powerful **vgui** (virtual GUI) package that enables creating accessible remote interfaces. With vgui, you can build virtual GUI elements (buttons, listboxes, checkboxes) that are navigated via keyboard and spoken to the user through NVDA remote protocol. This is perfect for creating remote configuration interfaces, menus, forms, and interactive applications. See the [vgui documentation](vgui/README.md) and [examples/vgui/simple_form](examples/vgui/simple_form/) for details.
 
 ## Purpose of this library
 This library is intended to be used by developers who want to create applications that can interact with NVDA remote. It provides a simple and easy-to-use interface for sending and receiving messages, as well as handling errors and other events.
@@ -32,16 +32,12 @@ The examples in this repository now support configuration through environment va
 - `NVDA_REMOTE_PORT` - NVDA Remote server port (optional, defaults to `6837`)
 
 ### Setting up Configuration
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Edit `.env` and set your key:
-   ```
-   NVDA_REMOTE_KEY=your_key_here
-   # NVDA_REMOTE_HOST=nvdaremote.ru
-   # NVDA_REMOTE_PORT=6837
-   ```
+Run the interactive setup script:
+```bash
+./setup.sh
+```
+
+This will guide you through the configuration process and create a `.env` file with your settings.
 
 Alternatively, you can set environment variables directly or the examples will prompt you for the key if not found.
 
@@ -86,15 +82,24 @@ func main() {
 
 ```
 
-## examples
+## Examples
 All examples now use a common configuration mechanism that loads settings from `.env` files or environment variables. See the [Configuration for Examples](#configuration-for-examples) section above.
 
-- ./example_main - a simple example program that connects as a target and sends a speech message every 5 seconds while checking and printing events from the controller.
-- ./example_melody - a simple example program that connects as a target, checks for spacebar key press event from the controller and sends different beeps at there corresponding times to make a melody.
-- ./example_piano - an example target client that receives key press events and sends a beep with a frequency based on the key that was pressed. This example caused me believe that Go is fast! My previous implementation in python was slow, the beep feetback was delayed. Now, it is instant!
-- ./example_type_hello_cmd - an example controller client that waits for a target to join, then sends key win+r, cmd, enter, echo hello, enter to the target. This example caused a lot of fun with deadlocks and sleepy goroutines, but finally i fixed it.
-- ./example_tell_progress - an example controller client that receives beep events from the target, converts them to a progress bar percentage and logs it to the console. It works only if you set progress bar announcements to beeps or beeps+speech in your NVDA settings.
-- ./example_vgui - an example slave client that demonstrates the virtual GUI (vgui) framework. It creates a form with listboxes, checkboxes, and buttons that can be navigated using Tab key and activated with Enter/Space. Perfect for creating remote accessible interfaces!
+The examples are now organized in the `examples/` directory. See [examples/README.md](examples/README.md) for detailed information.
+
+### Quick Overview
+- **examples/basic/main_example** - Simple example that sends speech messages every 5 seconds
+- **examples/audio/melody** - Plays a melody when spacebar is pressed
+- **examples/audio/piano** - Interactive piano using key presses
+- **examples/controller/type_hello_cmd** - Controller that types commands remotely
+- **examples/basic/tell_progress** - Listens for progress bar beep events
+- **examples/vgui/simple_form** - Virtual GUI form with listboxes, checkboxes, and buttons
+
+To run an example:
+```bash
+cd examples/vgui/simple_form
+go run .
+```
 
 ## Usage
 The usage of this library is described in the [usage](usage.md) file. Check it out for more details on how to use the library and its features.

@@ -1,16 +1,13 @@
-// this is a main example package for an NVDA remote client library.
-// Use this package to debug everything in the library and test it.
 package main
 
 import (
 	"fmt"
 	"os"
-	"time"
 
 	// goerror is also my package, but it is not a part of nvda remote client library.
 	"github.com/denizsincar29/goerror"
 	"github.com/denizsincar29/nvda_remote_go"
-	"github.com/denizsincar29/nvda_remote_go/exampleconfig"
+	exampleconfig "github.com/denizsincar29/nvda_remote_go/examples/shared/config"
 )
 
 func main() {
@@ -27,7 +24,8 @@ func main() {
 	// defer remote.Close()  // we'd do this, but lets defer goodbye instead
 	defer GoodBye(remote)
 	logger.Info("Connected to NVDA remote client")
-	ticker := time.NewTicker(5 * time.Second)
+	notemaker := NewNoteMaker()
+	notch := notemaker.Ch
 	for {
 		// check error channel for errors
 		select {
@@ -36,10 +34,25 @@ func main() {
 		// check for events
 		case event := <-remote.Events():
 			fmt.Println("Event received:", event)
-		case <-ticker.C:
-			remote.SendSpeech("Hello, nvda user! I'm a fake nvda remote client.")
-		default:
-			// no error, continue
+			switch e := event.(type) {
+			case nvda_remote_go.KeyPacket:
+				key, err := e.GetKey()
+				if err != nil {
+					logger.Error("Failed to get key from event", "error", err)
+					continue
+				}
+				if e.Pressed && key == "space" {
+					notemaker.Start()
+				}
+			case nvda_remote_go.ClientJoinedPacket:
+				notemaker.Start()
+			}
+		case note, ok := <-notch:
+			if !ok {
+				logger.Info("Channel closed, strange!")
+				return
+			}
+			remote.SendBeep(note.Freq, note.Duration)
 		}
 
 	}

@@ -12,7 +12,7 @@ import (
 	// goerror is also my package, but it is not a part of nvda remote client library.
 	"github.com/denizsincar29/goerror"
 	"github.com/denizsincar29/nvda_remote_go"
-	"github.com/denizsincar29/nvda_remote_go/exampleconfig"
+	exampleconfig "github.com/denizsincar29/nvda_remote_go/examples/shared/config"
 )
 
 func beepFreqToProgress(beepFreq int) int {
