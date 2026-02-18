@@ -36,6 +36,8 @@ func NewHandler(client *nvda_remote_go.NVDARemoteClient, gui *GUI, logger *slog.
 	// Set up speech callback
 	gui.SetSpeechCallback(func(text string) {
 		if text != "" {
+			// Cancel previous speech to ensure new speech interrupts
+			client.CancelSpeech()
 			client.SendSpeech(text)
 		}
 	})
@@ -58,6 +60,8 @@ func (h *Handler) Start() {
 	
 	// Speak the initial focused element
 	if initialText := h.gui.SpeakFocusedElement(); initialText != "" {
+		// Cancel any previous speech before initial announcement
+		h.client.CancelSpeech()
 		h.client.SendSpeech(initialText)
 	}
 }
@@ -127,6 +131,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 			newLayout := h.gui.SwitchKeyboardLayout()
 			layoutName := h.gui.GetKeyboardLayoutName(newLayout)
 			h.logger.Info("Keyboard layout switched", "layout", layoutName)
+			h.client.CancelSpeech()
 			h.client.SendSpeech("Layout: " + layoutName)
 		}
 		return // Don't process modifier key itself
@@ -150,6 +155,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 			newLayout := h.gui.SwitchKeyboardLayout()
 			layoutName := h.gui.GetKeyboardLayoutName(newLayout)
 			h.logger.Info("Keyboard layout switched", "layout", layoutName)
+			h.client.CancelSpeech()
 			h.client.SendSpeech("Layout: " + layoutName)
 		}
 		return // Don't process modifier key itself
@@ -164,6 +170,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 		if shiftPressed {
 			// Shift+Tab: Move focus backward
 			if speechText := h.gui.MoveFocusBackward(); speechText != "" {
+				h.client.CancelSpeech()
 				h.client.SendSpeech(speechText)
 			}
 			return
@@ -186,6 +193,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 	
 	// Let the GUI handle the key with modifiers and get speech output
 	if speechText := h.gui.HandleKeyWithModifiers(key, modifiers, event.Pressed); speechText != "" {
+		h.client.CancelSpeech()
 		h.client.SendSpeech(speechText)
 	}
 }
