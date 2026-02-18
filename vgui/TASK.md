@@ -372,28 +372,56 @@ func TestTextBoxScreenReaderBehavior(t *testing.T) {
 
 ### Example Directory Structure
 ```
-example_text_editor/
-  ├── main.go
-  ├── editme.txt
+examples/
+  ├── audio/
+  │   ├── melody/
+  │   │   ├── main.go
+  │   │   ├── logs.go
+  │   │   └── pitch.go
+  │   └── piano/
+  │       ├── main.go
+  │       ├── logs.go
+  │       └── pitch.go
+  ├── basic/
+  │   ├── main_example/
+  │   │   ├── main.go
+  │   │   └── logs.go
+  │   └── tell_progress/
+  │       ├── main.go
+  │       └── logs.go
+  ├── controller/
+  │   └── type_hello_cmd/
+  │       ├── main.go
+  │       └── logs.go
+  ├── vgui/
+  │   └── simple_form/
+  │       └── main.go
+  ├── shared/
+  │   └── config/
+  │       └── config.go
   └── README.md
 
-example_todo/
-  ├── main.go
-  ├── todos.json
-  └── README.md
-
-example_config/
-  ├── main.go
-  ├── config.json
-  └── README.md
-
-example_game/
-  ├── main.go
-  └── README.md
-
-example_calculator/
-  ├── main.go
-  └── README.md
+Future examples (as described in this task):
+  examples/
+    ├── vgui/
+    │   ├── text_editor/
+    │   │   ├── main.go
+    │   │   ├── editme.txt
+    │   │   └── README.md
+    │   ├── todo/
+    │   │   ├── main.go
+    │   │   ├── todos.json
+    │   │   └── README.md
+    │   ├── config_manager/
+    │   │   ├── main.go
+    │   │   ├── config.json
+    │   │   └── README.md
+    │   ├── game/
+    │   │   ├── main.go
+    │   │   └── README.md
+    │   └── calculator/
+    │       ├── main.go
+    │       └── README.md
 ```
 
 ## Suggested Approach
