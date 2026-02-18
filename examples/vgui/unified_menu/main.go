@@ -530,11 +530,13 @@ func (app *Application) showTodo() {
 	refreshList := func() {
 		todoItems = app.getTodoStrings()
 		listbox.Items = todoItems
-		if listbox.SelectedIndex >= len(todoItems) {
-			listbox.SelectedIndex = len(todoItems) - 1
-		}
-		if listbox.SelectedIndex < 0 && len(todoItems) > 0 {
+		// Handle empty list first
+		if len(todoItems) == 0 {
+			listbox.SelectedIndex = -1
+		} else if listbox.SelectedIndex < 0 {
 			listbox.SelectedIndex = 0
+		} else if listbox.SelectedIndex >= len(todoItems) {
+			listbox.SelectedIndex = len(todoItems) - 1
 		}
 	}
 	
@@ -542,7 +544,7 @@ func (app *Application) showTodo() {
 	addBtn := vgui.NewButton("Add New Todo")
 	addBtn.OnClick = func() string {
 		newTodo := Todo{
-			Text:      "New Todo (edit in todos.json)",
+			Text:      "New Todo",
 			Completed: false,
 		}
 		app.todos = append(app.todos, newTodo)
