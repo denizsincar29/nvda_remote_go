@@ -291,8 +291,8 @@ func TestTextArea(t *testing.T) {
 	textarea := NewTextArea("Test", "Line 1\nLine 2\nLine 3")
 	
 	// Test initial state
-	if textarea.row != 0 {
-		t.Errorf("Expected row 0, got %d", textarea.row)
+	if textarea.Row != 0 {
+		t.Errorf("Expected row 0, got %d", textarea.Row)
 	}
 	
 	// Test move down
@@ -300,8 +300,8 @@ func TestTextArea(t *testing.T) {
 	if result != "Line 2" {
 		t.Errorf("Expected 'Line 2', got '%s'", result)
 	}
-	if textarea.row != 1 {
-		t.Errorf("Expected row 1, got %d", textarea.row)
+	if textarea.Row != 1 {
+		t.Errorf("Expected row 1, got %d", textarea.Row)
 	}
 	
 	// Test move up
@@ -309,18 +309,18 @@ func TestTextArea(t *testing.T) {
 	if result != "Line 1" {
 		t.Errorf("Expected 'Line 1', got '%s'", result)
 	}
-	if textarea.row != 0 {
-		t.Errorf("Expected row 0, got %d", textarea.row)
+	if textarea.Row != 0 {
+		t.Errorf("Expected row 0, got %d", textarea.Row)
 	}
 	
 	// Test move to line start
-	textarea.col = 3
+	textarea.Col = 3
 	result = textarea.MoveToLineStart()
 	if result != "L" {
 		t.Errorf("Expected 'L', got '%s'", result)
 	}
-	if textarea.col != 0 {
-		t.Errorf("Expected col 0, got %d", textarea.col)
+	if textarea.Col != 0 {
+		t.Errorf("Expected col 0, got %d", textarea.Col)
 	}
 	
 	// Test move to line end
@@ -329,8 +329,8 @@ func TestTextArea(t *testing.T) {
 	if !strings.Contains(result, "end") {
 		t.Errorf("Expected end of line message, got '%s'", result)
 	}
-	if textarea.col != len("Line 1") {
-		t.Errorf("Expected col %d, got %d", len("Line 1"), textarea.col)
+	if textarea.Col != len("Line 1") {
+		t.Errorf("Expected col %d, got %d", len("Line 1"), textarea.Col)
 	}
 }
 

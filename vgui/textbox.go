@@ -291,8 +291,8 @@ func (t *TextBox) OnActivate() string {
 type TextArea struct {
 	TextBox
 	lines    []string
-	row      int
-	col      int
+	Row      int // Current row (line) position
+	Col      int // Current column position
 	MaxLines int
 }
 
@@ -313,8 +313,8 @@ func NewTextArea(name string, initialText string) *TextArea {
 			Text: initialText,
 		},
 		lines: lines,
-		row:   0,
-		col:   0,
+		Row:   0,
+		Col:   0,
 	}
 }
 
@@ -343,29 +343,29 @@ func (t *TextArea) syncFromLines() {
 
 // getCurrentLine returns the current line text
 func (t *TextArea) getCurrentLine() string {
-	if t.row >= len(t.lines) {
+	if t.Row >= len(t.lines) {
 		return ""
 	}
-	return t.lines[t.row]
+	return t.lines[t.Row]
 }
 
 // InsertChar inserts a character at the cursor position
 func (t *TextArea) InsertChar(ch rune) string {
 	if ch == '\n' {
 		// Insert newline
-		line := t.lines[t.row]
-		t.lines[t.row] = line[:t.col]
-		t.lines = append(t.lines[:t.row+1], append([]string{line[t.col:]}, t.lines[t.row+1:]...)...)
-		t.row++
-		t.col = 0
+		line := t.lines[t.Row]
+		t.lines[t.Row] = line[:t.Col]
+		t.lines = append(t.lines[:t.Row+1], append([]string{line[t.Col:]}, t.lines[t.Row+1:]...)...)
+		t.Row++
+		t.Col = 0
 		t.syncFromLines()
 		return "new line"
 	}
 	
-	line := []rune(t.lines[t.row])
-	line = append(line[:t.col], append([]rune{ch}, line[t.col:]...)...)
-	t.lines[t.row] = string(line)
-	t.col++
+	line := []rune(t.lines[t.Row])
+	line = append(line[:t.Col], append([]rune{ch}, line[t.Col:]...)...)
+	t.lines[t.Row] = string(line)
+	t.Col++
 	t.syncFromLines()
 	
 	if t.OnChange != nil {
@@ -377,13 +377,13 @@ func (t *TextArea) InsertChar(ch rune) string {
 
 // MoveLeft moves the cursor left
 func (t *TextArea) MoveLeft() string {
-	if t.col > 0 {
-		t.col--
-		ch := rune(t.lines[t.row][t.col])
+	if t.Col > 0 {
+		t.Col--
+		ch := rune(t.lines[t.Row][t.Col])
 		return t.announceChar(ch)
-	} else if t.row > 0 {
-		t.row--
-		t.col = len(t.lines[t.row])
+	} else if t.Row > 0 {
+		t.Row--
+		t.Col = len(t.lines[t.Row])
 		if t.localizer != nil {
 			return t.localizer.T("end of text")
 		}
@@ -399,19 +399,19 @@ func (t *TextArea) MoveLeft() string {
 // MoveRight moves the cursor right
 func (t *TextArea) MoveRight() string {
 	line := t.getCurrentLine()
-	if t.col < len(line) {
-		t.col++
-		if t.col < len(line) {
-			ch := rune(line[t.col])
+	if t.Col < len(line) {
+		t.Col++
+		if t.Col < len(line) {
+			ch := rune(line[t.Col])
 			return t.announceChar(ch)
 		}
 		if t.localizer != nil {
 			return t.localizer.T("end of text")
 		}
 		return "end of line"
-	} else if t.row < len(t.lines)-1 {
-		t.row++
-		t.col = 0
+	} else if t.Row < len(t.lines)-1 {
+		t.Row++
+		t.Col = 0
 		line = t.getCurrentLine()
 		if line == "" {
 			if t.localizer != nil {
@@ -431,11 +431,11 @@ func (t *TextArea) MoveRight() string {
 
 // MoveUp moves the cursor up one line
 func (t *TextArea) MoveUp() string {
-	if t.row > 0 {
-		t.row--
+	if t.Row > 0 {
+		t.Row--
 		// Adjust column if new line is shorter
-		if t.col > len(t.lines[t.row]) {
-			t.col = len(t.lines[t.row])
+		if t.Col > len(t.lines[t.Row]) {
+			t.Col = len(t.lines[t.Row])
 		}
 		return t.getCurrentLine()
 	}
@@ -448,11 +448,11 @@ func (t *TextArea) MoveUp() string {
 
 // MoveDown moves the cursor down one line
 func (t *TextArea) MoveDown() string {
-	if t.row < len(t.lines)-1 {
-		t.row++
+	if t.Row < len(t.lines)-1 {
+		t.Row++
 		// Adjust column if new line is shorter
-		if t.col > len(t.lines[t.row]) {
-			t.col = len(t.lines[t.row])
+		if t.Col > len(t.lines[t.Row]) {
+			t.Col = len(t.lines[t.Row])
 		}
 		return t.getCurrentLine()
 	}
@@ -465,7 +465,7 @@ func (t *TextArea) MoveDown() string {
 
 // MoveToLineStart moves the cursor to the start of the current line
 func (t *TextArea) MoveToLineStart() string {
-	t.col = 0
+	t.Col = 0
 	line := t.getCurrentLine()
 	if line == "" {
 		if t.localizer != nil {
@@ -479,7 +479,7 @@ func (t *TextArea) MoveToLineStart() string {
 
 // MoveToLineEnd moves the cursor to the end of the current line
 func (t *TextArea) MoveToLineEnd() string {
-	t.col = len(t.lines[t.row])
+	t.Col = len(t.lines[t.Row])
 	if t.localizer != nil {
 		return t.localizer.T("end of text")
 	}
@@ -488,12 +488,12 @@ func (t *TextArea) MoveToLineEnd() string {
 
 // DeleteCharBefore deletes the character before the cursor
 func (t *TextArea) DeleteCharBefore() string {
-	if t.col > 0 {
-		line := []rune(t.lines[t.row])
-		deletedChar := line[t.col-1]
-		line = append(line[:t.col-1], line[t.col:]...)
-		t.lines[t.row] = string(line)
-		t.col--
+	if t.Col > 0 {
+		line := []rune(t.lines[t.Row])
+		deletedChar := line[t.Col-1]
+		line = append(line[:t.Col-1], line[t.Col:]...)
+		t.lines[t.Row] = string(line)
+		t.Col--
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
@@ -501,14 +501,14 @@ func (t *TextArea) DeleteCharBefore() string {
 		}
 		
 		return t.announceChar(deletedChar)
-	} else if t.row > 0 {
+	} else if t.Row > 0 {
 		// Join with previous line
-		prevLine := t.lines[t.row-1]
-		currentLine := t.lines[t.row]
-		t.lines[t.row-1] = prevLine + currentLine
-		t.lines = append(t.lines[:t.row], t.lines[t.row+1:]...)
-		t.col = len(prevLine)
-		t.row--
+		prevLine := t.lines[t.Row-1]
+		currentLine := t.lines[t.Row]
+		t.lines[t.Row-1] = prevLine + currentLine
+		t.lines = append(t.lines[:t.Row], t.lines[t.Row+1:]...)
+		t.Col = len(prevLine)
+		t.Row--
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
@@ -527,11 +527,11 @@ func (t *TextArea) DeleteCharBefore() string {
 // DeleteCharAfter deletes the character after the cursor
 func (t *TextArea) DeleteCharAfter() string {
 	line := t.getCurrentLine()
-	if t.col < len(line) {
+	if t.Col < len(line) {
 		lineRunes := []rune(line)
-		deletedChar := lineRunes[t.col]
-		lineRunes = append(lineRunes[:t.col], lineRunes[t.col+1:]...)
-		t.lines[t.row] = string(lineRunes)
+		deletedChar := lineRunes[t.Col]
+		lineRunes = append(lineRunes[:t.Col], lineRunes[t.Col+1:]...)
+		t.lines[t.Row] = string(lineRunes)
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
@@ -539,12 +539,12 @@ func (t *TextArea) DeleteCharAfter() string {
 		}
 		
 		return t.announceChar(deletedChar)
-	} else if t.row < len(t.lines)-1 {
+	} else if t.Row < len(t.lines)-1 {
 		// Join with next line
-		currentLine := t.lines[t.row]
-		nextLine := t.lines[t.row+1]
-		t.lines[t.row] = currentLine + nextLine
-		t.lines = append(t.lines[:t.row+1], t.lines[t.row+2:]...)
+		currentLine := t.lines[t.Row]
+		nextLine := t.lines[t.Row+1]
+		t.lines[t.Row] = currentLine + nextLine
+		t.lines = append(t.lines[:t.Row+1], t.lines[t.Row+2:]...)
 		t.syncFromLines()
 		
 		if t.OnChange != nil {
@@ -565,20 +565,20 @@ func (t *TextArea) MoveToPreviousWord() string {
 	line := t.getCurrentLine()
 	
 	// If at beginning of line, move to previous line
-	if t.col == 0 && t.row > 0 {
-		t.row--
-		t.col = len(t.lines[t.row])
+	if t.Col == 0 && t.Row > 0 {
+		t.Row--
+		t.Col = len(t.lines[t.Row])
 		line = t.getCurrentLine()
 	}
 	
 	// Skip whitespace backwards
-	for t.col > 0 && unicode.IsSpace(rune(line[t.col-1])) {
-		t.col--
+	for t.Col > 0 && unicode.IsSpace(rune(line[t.Col-1])) {
+		t.Col--
 	}
 	
 	// Skip word characters backwards
-	for t.col > 0 && !unicode.IsSpace(rune(line[t.col-1])) {
-		t.col--
+	for t.Col > 0 && !unicode.IsSpace(rune(line[t.Col-1])) {
+		t.Col--
 	}
 	
 	// Get the word at the cursor
@@ -590,23 +590,23 @@ func (t *TextArea) MoveToNextWord() string {
 	line := t.getCurrentLine()
 	
 	// Skip current word
-	for t.col < len(line) && !unicode.IsSpace(rune(line[t.col])) {
-		t.col++
+	for t.Col < len(line) && !unicode.IsSpace(rune(line[t.Col])) {
+		t.Col++
 	}
 	
 	// Skip whitespace
-	for t.col < len(line) && unicode.IsSpace(rune(line[t.col])) {
-		t.col++
+	for t.Col < len(line) && unicode.IsSpace(rune(line[t.Col])) {
+		t.Col++
 	}
 	
 	// If at end of line, move to next line
-	if t.col >= len(line) && t.row < len(t.lines)-1 {
-		t.row++
-		t.col = 0
+	if t.Col >= len(line) && t.Row < len(t.lines)-1 {
+		t.Row++
+		t.Col = 0
 		line = t.getCurrentLine()
 	}
 	
-	if t.col >= len(line) {
+	if t.Col >= len(line) {
 		if t.localizer != nil {
 			return t.localizer.T("end of text")
 		}
@@ -620,15 +620,15 @@ func (t *TextArea) MoveToNextWord() string {
 // getCurrentWord returns the word at the current cursor position
 func (t *TextArea) getCurrentWord() string {
 	line := t.getCurrentLine()
-	if t.col >= len(line) {
+	if t.Col >= len(line) {
 		if t.localizer != nil {
 			return t.localizer.T("end of text")
 		}
 		return "end of line"
 	}
 	
-	start := t.col
-	end := t.col
+	start := t.Col
+	end := t.Col
 	
 	// Find word start
 	for start > 0 && !unicode.IsSpace(rune(line[start-1])) {
