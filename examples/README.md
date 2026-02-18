@@ -14,8 +14,7 @@ examples/
 │   └── tell_progress/ - Listens for progress bar beep events
 ├── controller/
 │   └── type_hello_cmd/ - Controller that types commands remotely
-├── vgui/
-│   └── simple_form/   - Virtual GUI form with listboxes, checkboxes, and buttons
+├── vgui/              - Virtual GUI unified menu with all examples
 └── shared/
     └── config/        - Shared configuration loader for all examples
 ```
@@ -42,8 +41,12 @@ NVDA_REMOTE_PORT=6837
 
 Navigate to any example directory and run:
 ```bash
-cd examples/vgui/simple_form
+# For most examples
+cd examples/basic/main_example
 go run .
+
+# For VGUI unified menu (all GUI examples)
+go run ./examples/vgui
 ```
 
 ## Example Descriptions
@@ -60,7 +63,17 @@ go run .
 - **type_hello_cmd**: Master client that opens cmd and types "Hello from NVDA remote client" when someone joins
 
 ### Virtual GUI Examples
-- **simple_form**: Demonstrates the vgui framework with a form containing listboxes, checkboxes, and buttons
+- **vgui**: Unified menu launcher with all vgui examples:
+  - Simple Calculator: Basic arithmetic operations
+  - Simple Form: Form with listboxes, checkboxes, and buttons
+  - Number Guessing Game: Interactive game with scoring
+  - Text Editor: Simple text file editor
+  - Todo List Manager: CRUD operations with persistent storage
+  
+Run all examples from one application:
+```bash
+go run ./examples/vgui
+```
 
 ## Requirements
 
