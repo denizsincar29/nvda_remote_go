@@ -32,7 +32,7 @@ The application supports multiple keyboard layouts:
 - **Russian** (ЙЦУКЕН)
 - **German** (QWERTZ)
 
-Use Alt+Shift to cycle through available layouts. The layout affects how Shift+key combinations produce characters (e.g., Shift+1 produces "!" in US layout but "₽" in Russian layout).
+Use Alt+Shift to cycle through available layouts. The layout affects how Shift+key combinations produce characters (e.g., Shift+1 produces "!" in US and Russian layouts but "!" in German layout; Shift+3 produces "#" in US layout but "№" in Russian layout).
 
 ## Multi-Window Design
 

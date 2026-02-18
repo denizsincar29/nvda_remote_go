@@ -284,13 +284,8 @@ func (t *TextBox) SelectAll() string {
 	t.CursorPos = len(t.Text)
 	textLen := len([]rune(t.Text))
 	
-	announcement := fmt.Sprintf("%d characters selected", textLen)
-	if t.localizer != nil {
-		// For now, use English format. Proper localization would need a format string
-		announcement = fmt.Sprintf("%d characters selected", textLen)
-	}
-	
-	return announcement
+	// For now, use English format. Proper localization would need a format string
+	return fmt.Sprintf("%d characters selected", textLen)
 }
 
 // SetCursorPosition sets the cursor position
@@ -694,11 +689,6 @@ func (t *TextArea) SelectAll() string {
 	textLen := len([]rune(t.Text))
 	lineCount := len(t.lines)
 	
-	announcement := fmt.Sprintf("%d characters, %d lines selected", textLen, lineCount)
-	if t.localizer != nil {
-		// For now, use English format. Proper localization would need a format string
-		announcement = fmt.Sprintf("%d characters, %d lines selected", textLen, lineCount)
-	}
-	
-	return announcement
+	// For now, use English format. Proper localization would need a format string
+	return fmt.Sprintf("%d characters, %d lines selected", textLen, lineCount)
 }
