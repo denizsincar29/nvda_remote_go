@@ -19,6 +19,7 @@ import (
 type WindowType string
 
 const (
+	WindowDesktop    WindowType = "desktop"
 	WindowMain       WindowType = "main"
 	WindowCalculator WindowType = "calculator"
 	WindowForm       WindowType = "form"
@@ -34,6 +35,7 @@ type Application struct {
 	handler       *vgui.Handler
 	logger        *slog.Logger
 	currentWindow WindowType
+	windowStack   []WindowType  // Stack of open windows
 	gui           *vgui.GUI
 	
 	// Game state
@@ -87,6 +89,7 @@ func main() {
 		remote:        remote,
 		logger:        logger,
 		currentWindow: WindowMain,
+		windowStack:   []WindowType{WindowMain}, // Initialize with main window
 	}
 
 	// Initialize with main menu
@@ -113,7 +116,9 @@ func main() {
 
 // showMainMenu displays the main menu
 func (app *Application) showMainMenu() {
+	// Reset to main window (clear stack except main)
 	app.currentWindow = WindowMain
+	app.windowStack = []WindowType{WindowMain}
 	app.gui = vgui.NewGUI()
 
 	// Title
@@ -190,7 +195,7 @@ func (app *Application) showMainMenu() {
 
 // showCalculator displays a simple calculator
 func (app *Application) showCalculator() {
-	app.currentWindow = WindowCalculator
+	app.pushWindow(WindowCalculator)
 	app.gui = vgui.NewGUI()
 
 	// Title
@@ -243,7 +248,7 @@ func (app *Application) showCalculator() {
 
 // showForm displays a simple form
 func (app *Application) showForm() {
-	app.currentWindow = WindowForm
+	app.pushWindow(WindowForm)
 	app.gui = vgui.NewGUI()
 
 	// Title
@@ -294,7 +299,7 @@ func (app *Application) showForm() {
 
 // showAbout displays the about screen
 func (app *Application) showAbout() {
-	app.currentWindow = WindowAbout
+	app.pushWindow(WindowAbout)
 	app.gui = vgui.NewGUI()
 
 	// Title
@@ -336,7 +341,7 @@ func (app *Application) showAbout() {
 
 // showGame displays the number guessing game
 func (app *Application) showGame() {
-	app.currentWindow = WindowGame
+	app.pushWindow(WindowGame)
 	app.gui = vgui.NewGUI()
 	
 	// Initialize game state
@@ -435,7 +440,7 @@ func (app *Application) showGame() {
 
 // showTextEditor displays a simple text editor
 func (app *Application) showTextEditor() {
-	app.currentWindow = WindowTextEditor
+	app.pushWindow(WindowTextEditor)
 	app.gui = vgui.NewGUI()
 	
 	// Initialize editor state
@@ -505,7 +510,7 @@ func (app *Application) showTextEditor() {
 
 // showTodo displays a simple todo list
 func (app *Application) showTodo() {
-	app.currentWindow = WindowTodo
+	app.pushWindow(WindowTodo)
 	app.gui = vgui.NewGUI()
 	
 	// Load todos if not loaded
@@ -658,7 +663,107 @@ func (app *Application) updateHandler() {
 		app.handler.Stop()
 	}
 	app.handler = vgui.NewHandler(app.remote, app.gui, app.logger)
+	
+	// Set up Alt+F4 close callback for all windows except desktop and main
+	if app.currentWindow != WindowDesktop && app.currentWindow != WindowMain {
+		app.gui.SetCloseCallback(func() string {
+			return app.closeCurrentWindow()
+		})
+	}
+	
+	// Set up Win+D desktop hotkey
+	app.gui.RegisterHotkey("win+d", func() string {
+		app.showDesktop()
+		return "Going to desktop"
+	})
+	
 	app.handler.Start()
+}
+
+// pushWindow adds a window to the stack
+func (app *Application) pushWindow(window WindowType) {
+	app.windowStack = append(app.windowStack, window)
+	app.currentWindow = window
+	app.logger.Debug("Window opened", "window", window, "stack_size", len(app.windowStack))
+}
+
+// popWindow removes the current window and returns to previous
+func (app *Application) popWindow() WindowType {
+	if len(app.windowStack) <= 1 {
+		// Don't pop the last window (main or desktop)
+		return app.currentWindow
+	}
+	
+	// Remove current window from stack
+	app.windowStack = app.windowStack[:len(app.windowStack)-1]
+	
+	// Return to previous window
+	previous := app.windowStack[len(app.windowStack)-1]
+	app.currentWindow = previous
+	app.logger.Debug("Window closed", "previous", previous, "stack_size", len(app.windowStack))
+	
+	return previous
+}
+
+// closeCurrentWindow closes the current window and returns to previous
+func (app *Application) closeCurrentWindow() string {
+	previous := app.popWindow()
+	
+	// Show the previous window
+	switch previous {
+	case WindowDesktop:
+		app.showDesktop()
+	case WindowMain:
+		app.showMainMenu()
+	case WindowCalculator:
+		app.showCalculator()
+	case WindowForm:
+		app.showForm()
+	case WindowGame:
+		app.showGame()
+	case WindowTextEditor:
+		app.showTextEditor()
+	case WindowTodo:
+		app.showTodo()
+	case WindowAbout:
+		app.showAbout()
+	}
+	
+	return fmt.Sprintf("Closed window, returning to %s", previous)
+}
+
+// showDesktop displays the desktop window (accessible via Win+D)
+func (app *Application) showDesktop() {
+	app.currentWindow = WindowDesktop
+	app.gui = vgui.NewGUI()
+	
+	// Title
+	app.gui.AddElement(vgui.NewLabel("Desktop - Windows are minimized"))
+	
+	// List all open applications (windows in stack)
+	if len(app.windowStack) > 1 {
+		app.gui.AddElement(vgui.NewLabel(fmt.Sprintf("Open windows: %d", len(app.windowStack)-1)))
+		
+		// Show window list
+		for i, win := range app.windowStack {
+			if win != WindowDesktop {
+				app.gui.AddElement(vgui.NewLabel(fmt.Sprintf("%d. %s", i+1, win)))
+			}
+		}
+	} else {
+		app.gui.AddElement(vgui.NewLabel("No open windows"))
+	}
+	
+	// Button to return to main menu
+	mainMenuBtn := vgui.NewButton("Main Menu")
+	mainMenuBtn.IsDefault = true
+	mainMenuBtn.OnClick = func() string {
+		app.showMainMenu()
+		return "Opening Main Menu"
+	}
+	app.gui.AddElement(mainMenuBtn)
+	
+	app.updateHandler()
 }
 
 // calculateExpression performs simple calculation on an expression string

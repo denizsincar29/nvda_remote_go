@@ -29,6 +29,7 @@ type GUI struct {
 	focusIndex     int
 	mu             sync.RWMutex
 	onSpeech       func(text string) // Callback to send speech output
+	onClose        func() string     // Callback when window is closed (Alt+F4)
 	localizer      *Localizer
 	logger         *slog.Logger
 	defaultButton  *Button // The default button (activated by Enter)
@@ -82,6 +83,13 @@ func (g *GUI) SetSpeechCallback(callback func(text string)) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.onSpeech = callback
+}
+
+// SetCloseCallback sets the callback function for window close events (Alt+F4)
+func (g *GUI) SetCloseCallback(callback func() string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.onClose = callback
 }
 
 // speak sends speech output via the callback
@@ -167,6 +175,19 @@ func (g *GUI) HandleKey(key string, pressed bool) string {
 func (g *GUI) HandleKeyWithModifiers(key string, modifiers []string, pressed bool) string {
 	// Only process key press (not release)
 	if !pressed {
+		return ""
+	}
+	
+	// Handle Alt+F4 for window close
+	if key == "f4" && hasModifier(modifiers, "alt") {
+		g.mu.RLock()
+		closeCallback := g.onClose
+		g.mu.RUnlock()
+		
+		if closeCallback != nil {
+			g.logger.Debug("Alt+F4 pressed, closing window")
+			return closeCallback()
+		}
 		return ""
 	}
 	
