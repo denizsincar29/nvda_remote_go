@@ -12,6 +12,7 @@ import (
 	// goerror is also my package, but it is not a part of nvda remote client library.
 	"github.com/denizsincar29/goerror"
 	"github.com/denizsincar29/nvda_remote_go"
+	"github.com/denizsincar29/nvda_remote_go/exampleconfig"
 )
 
 func beepFreqToProgress(beepFreq int) int {
@@ -24,9 +25,13 @@ func main() {
 	// create a new logger
 	logger := NewLogger(os.Stdout)
 	e := goerror.NewError(logger)
-	key := GetKey()
+
+	// Load configuration from .env file
+	config, err := exampleconfig.Load()
+	e.Must(err, "Failed to load configuration")
+
 	// create a new nvda remote client
-	remote, err := nvda_remote_go.NewClient("nvdaremote.ru", nvda_remote_go.DEFAULT_PORT, key, "master", logger)
+	remote, err := nvda_remote_go.NewClient(config.Host, config.Port, config.Key, "master", logger)
 	e.Must(err, "Failed to create NVDA remote client")
 	defer remote.Close()
 
