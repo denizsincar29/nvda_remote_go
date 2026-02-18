@@ -5,7 +5,8 @@ import "fmt"
 // Button represents a virtual button element
 type Button struct {
 	BaseElement
-	OnClick func() string // Callback function when button is clicked
+	OnClick   func() string // Callback function when button is clicked
+	IsDefault bool          // If true, Enter key activates this button
 }
 
 // NewButton creates a new button with the given name
@@ -50,10 +51,26 @@ func NewListBox(name string, items []string) *ListBox {
 // GetDescription returns the description including the current selected item
 func (l *ListBox) GetDescription() string {
 	if len(l.Items) == 0 {
-		return l.Name + ", " + string(l.role) + ", empty"
+		emptyMsg := "empty"
+		if l.localizer != nil {
+			emptyMsg = l.localizer.T("empty")
+		}
+		roleStr := string(l.role)
+		if l.localizer != nil {
+			roleStr = l.localizer.T(string(l.role))
+		}
+		return l.Name + ", " + roleStr + ", " + emptyMsg
 	}
 	selectedItem := l.Items[l.SelectedIndex]
-	return l.Name + ", " + string(l.role) + ", " + selectedItem + " selected, " + fmt.Sprintf("%d of %d", l.SelectedIndex+1, len(l.Items))
+	selectedStr := "selected"
+	ofStr := "of"
+	roleStr := string(l.role)
+	if l.localizer != nil {
+		selectedStr = l.localizer.T("selected")
+		ofStr = l.localizer.T("of")
+		roleStr = l.localizer.T(string(l.role))
+	}
+	return fmt.Sprintf("%s, %s, %s %s, %d %s %d", l.Name, roleStr, selectedItem, selectedStr, l.SelectedIndex+1, ofStr, len(l.Items))
 }
 
 // MoveUp moves the selection up in the listbox
@@ -61,6 +78,9 @@ func (l *ListBox) MoveUp() string {
 	if l.SelectedIndex > 0 {
 		l.SelectedIndex--
 		return l.Items[l.SelectedIndex]
+	}
+	if l.localizer != nil {
+		return l.localizer.T("top of list")
 	}
 	return "Top of list"
 }
@@ -70,6 +90,9 @@ func (l *ListBox) MoveDown() string {
 	if l.SelectedIndex < len(l.Items)-1 {
 		l.SelectedIndex++
 		return l.Items[l.SelectedIndex]
+	}
+	if l.localizer != nil {
+		return l.localizer.T("bottom of list")
 	}
 	return "Bottom of list"
 }
@@ -111,19 +134,31 @@ func NewCheckBox(name string, checked bool) *CheckBox {
 
 // GetDescription returns the description including the checked state
 func (c *CheckBox) GetDescription() string {
-	state := "not checked"
+	stateKey := "not checked"
 	if c.Checked {
-		state = "checked"
+		stateKey = "checked"
 	}
-	return c.Name + ", " + string(c.role) + ", " + state
+	state := stateKey
+	if c.localizer != nil {
+		state = c.localizer.T(stateKey)
+	}
+	roleStr := string(c.role)
+	if c.localizer != nil {
+		roleStr = c.localizer.T(string(c.role))
+	}
+	return c.Name + ", " + roleStr + ", " + state
 }
 
 // Toggle toggles the checkbox state
 func (c *CheckBox) Toggle() string {
 	c.Checked = !c.Checked
-	state := "not checked"
+	stateKey := "not checked"
 	if c.Checked {
-		state = "checked"
+		stateKey = "checked"
+	}
+	state := stateKey
+	if c.localizer != nil {
+		state = c.localizer.T(stateKey)
 	}
 	
 	if c.OnToggle != nil {
@@ -139,9 +174,13 @@ func (c *CheckBox) OnActivate() string {
 
 // OnStateChange returns the current state
 func (c *CheckBox) OnStateChange() string {
-	state := "not checked"
+	stateKey := "not checked"
 	if c.Checked {
-		state = "checked"
+		stateKey = "checked"
+	}
+	state := stateKey
+	if c.localizer != nil {
+		state = c.localizer.T(stateKey)
 	}
 	return state
 }

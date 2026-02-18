@@ -11,6 +11,8 @@ const (
 	RoleListBox  Role = "listbox"
 	RoleCheckBox Role = "checkbox"
 	RoleLabel    Role = "label"
+	RoleTextBox  Role = "textbox"
+	RoleTextArea Role = "textarea"
 )
 
 // Element is the interface that all virtual GUI elements must implement
@@ -34,12 +36,19 @@ type Element interface {
 	OnStateChange() string
 }
 
+// LocalizableElement is an interface for elements that support localization
+type LocalizableElement interface {
+	Element
+	SetLocalizer(localizer *Localizer)
+}
+
 // BaseElement provides a basic implementation of common element functionality
 type BaseElement struct {
 	Name        string
 	Description string
 	role        Role
 	focusable   bool
+	localizer   *Localizer
 }
 
 func (b *BaseElement) GetName() string {
@@ -54,7 +63,11 @@ func (b *BaseElement) GetDescription() string {
 	if b.Description != "" {
 		return b.Description
 	}
-	return b.Name + ", " + string(b.role)
+	roleStr := string(b.role)
+	if b.localizer != nil {
+		roleStr = b.localizer.T(string(b.role))
+	}
+	return b.Name + ", " + roleStr
 }
 
 func (b *BaseElement) IsFocusable() bool {
@@ -67,4 +80,9 @@ func (b *BaseElement) OnActivate() string {
 
 func (b *BaseElement) OnStateChange() string {
 	return ""
+}
+
+// SetLocalizer sets the localizer for the element
+func (b *BaseElement) SetLocalizer(localizer *Localizer) {
+	b.localizer = localizer
 }

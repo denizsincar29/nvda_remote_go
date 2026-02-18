@@ -9,12 +9,14 @@ import (
 
 // Handler manages the connection between a virtual GUI and an NVDA remote client
 type Handler struct {
-	client      *nvda_remote_go.NVDARemoteClient
-	gui         *GUI
-	logger      *slog.Logger
-	mu          sync.RWMutex
-	active      bool
+	client       *nvda_remote_go.NVDARemoteClient
+	gui          *GUI
+	logger       *slog.Logger
+	mu           sync.RWMutex
+	active       bool
 	shiftPressed bool // Track shift key state for Shift+Tab
+	ctrlPressed  bool // Track ctrl key state for Ctrl+key combinations
+	altPressed   bool // Track alt key state for Alt+key combinations
 }
 
 // NewHandler creates a new vgui handler for the given NVDA remote client
@@ -113,12 +115,26 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 	
 	h.logger.Debug("Key event", "key", key, "pressed", event.Pressed)
 	
-	// Track shift key state for Shift+Tab detection
+	// Track modifier key states
 	if key == "shift" || key == "leftShift" || key == "rightShift" {
 		h.mu.Lock()
 		h.shiftPressed = event.Pressed
 		h.mu.Unlock()
-		return // Don't process shift key itself
+		return // Don't process modifier key itself
+	}
+	
+	if key == "control" || key == "leftControl" || key == "rightControl" {
+		h.mu.Lock()
+		h.ctrlPressed = event.Pressed
+		h.mu.Unlock()
+		return // Don't process modifier key itself
+	}
+	
+	if key == "alt" || key == "leftAlt" || key == "rightAlt" {
+		h.mu.Lock()
+		h.altPressed = event.Pressed
+		h.mu.Unlock()
+		return // Don't process modifier key itself
 	}
 	
 	// Handle Shift+Tab for backward navigation
@@ -136,8 +152,22 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 		}
 	}
 	
-	// Let the GUI handle the key and get speech output
-	if speechText := h.gui.HandleKey(key, event.Pressed); speechText != "" {
+	// Build modifiers list
+	h.mu.RLock()
+	modifiers := []string{}
+	if h.ctrlPressed {
+		modifiers = append(modifiers, "ctrl")
+	}
+	if h.shiftPressed {
+		modifiers = append(modifiers, "shift")
+	}
+	if h.altPressed {
+		modifiers = append(modifiers, "alt")
+	}
+	h.mu.RUnlock()
+	
+	// Let the GUI handle the key with modifiers and get speech output
+	if speechText := h.gui.HandleKeyWithModifiers(key, modifiers, event.Pressed); speechText != "" {
 		h.client.SendSpeech(speechText)
 	}
 }
