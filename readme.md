@@ -11,6 +11,9 @@ Additionally both clients can send eachother his clipboard.
 ## What is this library for?
 This library is an NVDA remote client written in Go. It allows you to connect to an NVDA remote server as a controller or a target. It can send all kinds of messages to the server that are relayed to the target or controller, respectively. It can also receive messages from the server and process them accordingly.
 
+### Virtual GUI (vgui) Module
+The library includes a powerful **vgui** (virtual GUI) package that enables creating accessible remote interfaces. With vgui, you can build virtual GUI elements (buttons, listboxes, checkboxes) that are navigated via keyboard and spoken to the user through NVDA remote protocol. This is perfect for creating remote configuration interfaces, menus, forms, and interactive applications. See the [vgui documentation](vgui/README.md) and [example_vgui](example_vgui/) for details.
+
 ## Purpose of this library
 This library is intended to be used by developers who want to create applications that can interact with NVDA remote. It provides a simple and easy-to-use interface for sending and receiving messages, as well as handling errors and other events.
 Personally, I created this library for fun, to explore the protocol and make little experiments with it. All my experiments are in the repo, feal free to check them out.
@@ -91,6 +94,7 @@ All examples now use a common configuration mechanism that loads settings from `
 - ./example_piano - an example target client that receives key press events and sends a beep with a frequency based on the key that was pressed. This example caused me believe that Go is fast! My previous implementation in python was slow, the beep feetback was delayed. Now, it is instant!
 - ./example_type_hello_cmd - an example controller client that waits for a target to join, then sends key win+r, cmd, enter, echo hello, enter to the target. This example caused a lot of fun with deadlocks and sleepy goroutines, but finally i fixed it.
 - ./example_tell_progress - an example controller client that receives beep events from the target, converts them to a progress bar percentage and logs it to the console. It works only if you set progress bar announcements to beeps or beeps+speech in your NVDA settings.
+- ./example_vgui - an example slave client that demonstrates the virtual GUI (vgui) framework. It creates a form with listboxes, checkboxes, and buttons that can be navigated using Tab key and activated with Enter/Space. Perfect for creating remote accessible interfaces!
 
 ## Usage
 The usage of this library is described in the [usage](usage.md) file. Check it out for more details on how to use the library and its features.
