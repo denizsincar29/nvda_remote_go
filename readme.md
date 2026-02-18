@@ -19,6 +19,29 @@ Personally, I created this library for fun, to explore the protocol and make lit
 ```bash
 go get github.com/denizsincar29/nvda_remote_go
 ```
+
+## Configuration for Examples
+The examples in this repository now support configuration through environment variables or a `.env` file.
+
+### Configuration Options
+- `NVDA_REMOTE_KEY` - Your NVDA remote key (required)
+- `NVDA_REMOTE_HOST` - NVDA Remote server host (optional, defaults to `nvdaremote.ru`)
+- `NVDA_REMOTE_PORT` - NVDA Remote server port (optional, defaults to `6837`)
+
+### Setting up Configuration
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and set your key:
+   ```
+   NVDA_REMOTE_KEY=your_key_here
+   # NVDA_REMOTE_HOST=nvdaremote.ru
+   # NVDA_REMOTE_PORT=6837
+   ```
+
+Alternatively, you can set environment variables directly or the examples will prompt you for the key if not found.
+
 ## Usage
 Check out the main/main.go file for an example of how to use the library.
 Or for a simpler example, check out the code below:
@@ -61,6 +84,8 @@ func main() {
 ```
 
 ## examples
+All examples now use a common configuration mechanism that loads settings from `.env` files or environment variables. See the [Configuration for Examples](#configuration-for-examples) section above.
+
 - ./example_main - a simple example program that connects as a target and sends a speech message every 5 seconds while checking and printing events from the controller.
 - ./example_melody - a simple example program that connects as a target, checks for spacebar key press event from the controller and sends different beeps at there corresponding times to make a melody.
 - ./example_piano - an example target client that receives key press events and sends a beep with a frequency based on the key that was pressed. This example caused me believe that Go is fast! My previous implementation in python was slow, the beep feetback was delayed. Now, it is instant!
