@@ -129,14 +129,12 @@ func main() {
 	})
 
 	gui.RegisterHotkey("delete", func() string {
-		// Show confirmation dialog
-		return "Press the Delete button or confirm deletion"
+		// Delete selected todo (confirmation could be added)
+		return deleteBtn.OnActivate()
 	})
 
-	// Space key toggles completion
-	gui.RegisterHotkey("space", func() string {
-		return toggleBtn.OnActivate()
-	})
+	// Note: We don't register Space as a global hotkey to avoid conflicts
+	// Space will work naturally when the Toggle Complete button is focused
 
 	// Create and start handler
 	handler := vgui.NewHandler(remote, gui, logger)

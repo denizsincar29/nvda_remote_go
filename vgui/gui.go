@@ -156,6 +156,7 @@ func (g *GUI) MoveFocusBackward() string {
 }
 
 // HandleKey processes a key press event and returns speech output
+// This is a convenience method that delegates to HandleKeyWithModifiers with no modifiers
 func (g *GUI) HandleKey(key string, pressed bool) string {
 	return g.HandleKeyWithModifiers(key, []string{}, pressed)
 }
@@ -295,7 +296,8 @@ func (g *GUI) HandleKeyWithModifiers(key string, modifiers []string, pressed boo
 	}
 	
 	// Handle character input for text elements
-	if len(key) == 1 && !hasModifier(modifiers, "ctrl") {
+	// Only accept character input if no modifiers (except Shift) are pressed
+	if len(key) == 1 && !hasModifier(modifiers, "ctrl") && !hasModifier(modifiers, "alt") {
 		if tb, ok := focusedElem.(*TextBox); ok {
 			return tb.InsertChar(rune(key[0]))
 		}

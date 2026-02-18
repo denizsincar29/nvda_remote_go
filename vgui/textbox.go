@@ -271,7 +271,8 @@ func (t *TextBox) announceChar(ch rune) string {
 	return string(ch)
 }
 
-// SetCursorPosition sets the cursor position (for testing)
+// SetCursorPosition sets the cursor position
+// This is useful for programmatically positioning the cursor or in testing
 func (t *TextBox) SetCursorPosition(pos int) {
 	if pos < 0 {
 		pos = 0
@@ -385,7 +386,7 @@ func (t *TextArea) MoveLeft() string {
 		t.Row--
 		t.Col = len(t.lines[t.Row])
 		if t.localizer != nil {
-			return t.localizer.T("end of text")
+			return t.localizer.T("end of text") // End of previous line
 		}
 		return "end of line"
 	}

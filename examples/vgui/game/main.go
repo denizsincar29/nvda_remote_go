@@ -33,8 +33,8 @@ func main() {
 	logger.Info("Connected to NVDA remote server")
 
 	// Game state
-	rand.Seed(time.Now().UnixNano())
-	targetNumber := rand.Intn(100) + 1
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	targetNumber := rng.Intn(100) + 1
 	attempts := 0
 	maxAttempts := 7
 	gameOver := false
@@ -149,7 +149,7 @@ func main() {
 	// New Game button
 	newGameBtn := vgui.NewButton("New Game")
 	newGameBtn.OnClick = func() string {
-		targetNumber = rand.Intn(100) + 1
+		targetNumber = rng.Intn(100) + 1
 		attempts = 0
 		gameOver = false
 		inputBox.Text = ""
