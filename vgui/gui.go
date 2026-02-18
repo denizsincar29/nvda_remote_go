@@ -293,6 +293,17 @@ func (g *GUI) HandleKeyWithModifiers(key string, modifiers []string, pressed boo
 		if ta, ok := focusedElem.(*TextArea); ok {
 			return ta.DeleteCharAfter()
 		}
+		
+	case "a":
+		// Ctrl+A: Select all
+		if hasModifier(modifiers, "ctrl") {
+			if tb, ok := focusedElem.(*TextBox); ok {
+				return tb.SelectAll()
+			}
+			if ta, ok := focusedElem.(*TextArea); ok {
+				return ta.SelectAll()
+			}
+		}
 	}
 	
 	// Handle character input for text elements
