@@ -1,11 +1,10 @@
-// this is a main example package for an NVDA remote client library.
+// this is a speech logger example package for an NVDA remote client library.
 // Use this package to debug everything in the library and test it.
 package main
 
 import (
 	"fmt"
 	"os"
-	"time"
 
 	// goerror is also my package, but it is not a part of nvda remote client library.
 	"github.com/denizsincar29/goerror"
@@ -22,12 +21,9 @@ func main() {
 	config := exampleconfig.Load()
 
 	// create a new nvda remote client
-	remote, err := nvda_remote_go.NewClient(config.Host, config.Port, config.Key, "slave", logger)
+	remote, err := nvda_remote_go.NewClient(config.Host, config.Port, config.Key, "master", logger)
 	e.Must(err, "Failed to create NVDA remote client")
-	// defer remote.Close()  // we'd do this, but lets defer goodbye instead
-	defer GoodBye(remote)
-	logger.Info("Connected to NVDA remote client")
-	ticker := time.NewTicker(5 * time.Second)
+	defer remote.Close()
 	for {
 		// check error channel for errors
 		select {
@@ -35,22 +31,12 @@ func main() {
 			e.Must(err, "Error from NVDA remote client")
 		// check for events
 		case event := <-remote.Events():
-			fmt.Println("Event received:", event)
-			switch evt := event.(type) {
-			case nvda_remote_go.KeyPacket:
-				k, err := evt.GetKey()
-				e.Check(err, "Failed to get key from key packet")
-				// if ctrl, cancel speech
-				if k == "leftControl" || k == "rightControl" {
-					remote.CancelSpeech()
-				}
-				logger.Info("Key event received:", k)
-
+			switch e := event.(type) {
+			case nvda_remote_go.SpeakPacket:
+				spokenText := e.GetSequence()
+				priority := e.Priority
+				logger.Info(fmt.Sprintf("Spoken text: %s, Priority: %d", spokenText, priority))
 			}
-		case <-ticker.C:
-			remote.SendSpeech("Hello, nvda user! I'm a fake nvda remote client.")
-		default:
-			// no error, continue
 		}
 
 	}

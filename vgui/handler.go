@@ -25,23 +25,24 @@ func NewHandler(client *nvda_remote_go.NVDARemoteClient, gui *GUI, logger *slog.
 	if logger == nil {
 		logger = slog.Default()
 	}
-	
+
 	handler := &Handler{
 		client: client,
 		gui:    gui,
 		logger: logger,
 		active: false,
 	}
-	
+
 	// Set up speech callback
 	gui.SetSpeechCallback(func(text string) {
 		if text != "" {
 			// Cancel previous speech to ensure new speech interrupts
 			client.CancelSpeech()
+			logger.Debug("Cancelled previous speech before new announcement", "text", text)
 			client.SendSpeech(text)
 		}
 	})
-	
+
 	return handler
 }
 
@@ -50,14 +51,14 @@ func (h *Handler) Start() {
 	h.mu.Lock()
 	h.active = true
 	h.mu.Unlock()
-	
+
 	h.logger.Info("VGUI handler started")
-	
+
 	// Set event handler for the client
 	h.client.SetEventHandler(func(packet nvda_remote_go.Packet) {
 		h.handleEvent(packet)
 	})
-	
+
 	// Speak the initial focused element
 	if initialText := h.gui.SpeakFocusedElement(); initialText != "" {
 		// Cancel any previous speech before initial announcement
@@ -71,7 +72,7 @@ func (h *Handler) Stop() {
 	h.mu.Lock()
 	h.active = false
 	h.mu.Unlock()
-	
+
 	h.logger.Info("VGUI handler stopped")
 }
 
@@ -87,22 +88,22 @@ func (h *Handler) handleEvent(packet nvda_remote_go.Packet) {
 	h.mu.RLock()
 	active := h.active
 	h.mu.RUnlock()
-	
+
 	if !active {
 		return
 	}
-	
+
 	// We're primarily interested in key events
 	switch event := packet.(type) {
 	case nvda_remote_go.KeyPacket:
 		h.handleKeyEvent(event)
-		
+
 	case nvda_remote_go.ClientJoinedPacket:
 		h.logger.Info("Client joined", "id", event.ID, "type", event.ConnectionType)
-		
+
 	case nvda_remote_go.ClientLeftPacket:
 		h.logger.Info("Client left", "id", event.ID)
-		
+
 	default:
 		// Log other events if needed
 		h.logger.Debug("Received event", "type", packet.Type())
@@ -116,16 +117,16 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 		h.logger.Error("Failed to get key name", "error", err)
 		return
 	}
-	
+
 	h.logger.Debug("Key event", "key", key, "pressed", event.Pressed)
-	
+
 	// Track modifier key states
 	if key == "shift" || key == "leftShift" || key == "rightShift" {
 		h.mu.Lock()
 		wasAltPressed := h.altPressed
 		h.shiftPressed = event.Pressed
 		h.mu.Unlock()
-		
+
 		// Check for Alt+Shift combination to switch keyboard layout
 		if event.Pressed && wasAltPressed {
 			newLayout := h.gui.SwitchKeyboardLayout()
@@ -136,20 +137,20 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 		}
 		return // Don't process modifier key itself
 	}
-	
+
 	if key == "control" || key == "leftControl" || key == "rightControl" {
 		h.mu.Lock()
 		h.ctrlPressed = event.Pressed
 		h.mu.Unlock()
 		return // Don't process modifier key itself
 	}
-	
+
 	if key == "alt" || key == "leftAlt" || key == "rightAlt" {
 		h.mu.Lock()
 		wasShiftPressed := h.shiftPressed
 		h.altPressed = event.Pressed
 		h.mu.Unlock()
-		
+
 		// Check for Alt+Shift combination to switch keyboard layout
 		if event.Pressed && wasShiftPressed {
 			newLayout := h.gui.SwitchKeyboardLayout()
@@ -160,13 +161,13 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 		}
 		return // Don't process modifier key itself
 	}
-	
+
 	// Handle Shift+Tab for backward navigation
 	if key == "tab" && event.Pressed {
 		h.mu.RLock()
 		shiftPressed := h.shiftPressed
 		h.mu.RUnlock()
-		
+
 		if shiftPressed {
 			// Shift+Tab: Move focus backward
 			if speechText := h.gui.MoveFocusBackward(); speechText != "" {
@@ -176,7 +177,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 			return
 		}
 	}
-	
+
 	// Build modifiers list
 	h.mu.RLock()
 	modifiers := []string{}
@@ -190,7 +191,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 		modifiers = append(modifiers, "alt")
 	}
 	h.mu.RUnlock()
-	
+
 	// Let the GUI handle the key with modifiers and get speech output
 	if speechText := h.gui.HandleKeyWithModifiers(key, modifiers, event.Pressed); speechText != "" {
 		h.client.CancelSpeech()

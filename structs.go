@@ -164,7 +164,7 @@ func (c CancelSpeechPacket) String() string {
 
 func NewCancelSpeechPacket() CancelSpeechPacket {
 	return CancelSpeechPacket{
-		BasePacket: BasePacket{PacketType: "cancel_speech"},
+		BasePacket: BasePacket{PacketType: "cancel"},
 	}
 }
 
