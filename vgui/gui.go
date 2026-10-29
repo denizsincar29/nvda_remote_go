@@ -110,6 +110,23 @@ func (g *GUI) GetFocusedElement() Element {
 	return nil
 }
 
+// SetFocus moves the keyboard focus to the given element. It returns false if
+// the element is not part of this GUI or not focusable, so callers can react.
+func (g *GUI) SetFocus(element Element) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for i, e := range g.elements {
+		if e == element {
+			if !e.IsFocusable() {
+				return false
+			}
+			g.focusIndex = i
+			return true
+		}
+	}
+	return false
+}
+
 // MoveFocusForward moves focus to the next focusable element (Tab key)
 func (g *GUI) MoveFocusForward() string {
 	g.mu.Lock()
@@ -227,7 +244,14 @@ func (g *GUI) HandleKeyWithModifiers(key string, modifiers []string, pressed boo
 		return focusedElem.OnActivate()
 		
 	case "space":
-		// Space key behavior depends on element type
+		// Space types a space into text elements, toggles checkboxes and
+		// activates everything else.
+		if tb, ok := focusedElem.(*TextBox); ok {
+			return tb.InsertChar(' ')
+		}
+		if ta, ok := focusedElem.(*TextArea); ok {
+			return ta.InsertChar(' ')
+		}
 		if cb, ok := focusedElem.(*CheckBox); ok {
 			return cb.Toggle()
 		}

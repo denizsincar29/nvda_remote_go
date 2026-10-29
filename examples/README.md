@@ -75,6 +75,32 @@ Run all examples from one application:
 go run ./examples/vgui
 ```
 
+### Server mode (no relay)
+
+Any example can be run as a server instead of a client, e.g. the piano:
+
+```bash
+cd examples/audio/piano
+NVDA_REMOTE_MODE=server NVDA_SERVER_PORT=6837 NVDA_SERVER_CHANNEL=mykey go run .
+```
+
+Then connect NVDA Remote as a master to `<host>:6837` with the same key: the app
+is the shared endpoint, so keystrokes and speech skip the relay entirely.
+
+### Chat (server mode, per-user sessions)
+
+`examples/vgui/chat` is a chat where the server keeps context per key: the key
+you connect with is your nickname, and your history, unread messages and visit
+count survive reconnects and restarts.
+
+```bash
+NVDA_REMOTE_MODE=server NVDA_SERVER_PORT=6837 go run ./examples/vgui/chat
+```
+
+Sessions live in `~/.config/nvda_remote_go/chat/` (override with
+`NVDA_CHAT_SESSIONS`). Type in the "Message" box, press Enter to send, Up/Down
+in "History" to re-read.
+
 ## Requirements
 
 - Go 1.24.1 or later

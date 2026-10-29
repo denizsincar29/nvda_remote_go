@@ -1,5 +1,15 @@
 # VGUI Enhancement Task List
 
+> **Status (checked against the code):** the checkboxes below were never ticked,
+> but most of the work is done — localization (`locale.go`, en/ru/de),
+> dialogs and confirmation (`dialog.go`), text boxes (`textbox.go`), hotkeys
+> (`GUI.AddHotkey`), multi window support (`WindowManager`) and the example
+> applications all exist and are covered by `vgui_test.go` /
+> `vgui_extended_test.go`. Still open in practice: consistent `slog` usage
+> everywhere, the screen reader behaviour scenarios from section 10, and the
+> optional extra examples from section 9. Treat the list below as a backlog,
+> not as a description of the current state.
+
 This document outlines the enhancements requested for the vgui package to make it more feature-complete and production-ready.
 
 ## 1. Localization System

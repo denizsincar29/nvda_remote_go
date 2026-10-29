@@ -18,6 +18,66 @@ The library includes a powerful **vgui** (virtual GUI) package that enables crea
 This library is intended to be used by developers who want to create applications that can interact with NVDA remote. It provides a simple and easy-to-use interface for sending and receiving messages, as well as handling errors and other events.
 Personally, I created this library for fun, to explore the protocol and make little experiments with it. All my experiments are in the repo, feal free to check them out.
 
+## Server mode (no relay)
+
+Normally a session needs three parties: master, relay and slave. In server mode
+your app speaks the relay protocol itself and acts as the controled (slave)
+machine, so the master connects straight to you — one hop less per keystroke
+and per speech message.
+
+```go
+srv, err := nvda_remote_go.NewServer("0.0.0.0", "6837", "my-channel", logger)
+defer srv.Close()
+
+for ev := range srv.Events() {
+    if kp, ok := ev.(nvda_remote_go.KeyPacket); ok {
+        // key from the master arrived directly
+    }
+}
+srv.SendSpeech("hello from the server side")
+```
+
+- `NewServer` listens with TLS and generates a self signed certificate in
+  memory; use `NewServerWithTLSConfig` to supply your own.
+- The server presents itself as `slave` with id `1`, so an NVDA master sees a
+  normal slave in the channel list.
+- Pass an empty channel to accept any channel the master sends.
+- `Send*` helpers (speech, beep, braille, keys) are the same as on the client —
+  both types embed the same `packetSender`.
+- Examples can run either way: `examples/audio/piano` uses
+  `NVDA_REMOTE_MODE=server NVDA_SERVER_PORT=6837 NVDA_SERVER_CHANNEL=key`.
+
+### Sessions (server mode only)
+
+A relay cannot keep state for its clients, but when your app is the server it
+can remember things per channel — for a chat, the channel is the user's
+nickname.
+
+```go
+store, _ := nvda_remote_go.NewSessionStore("~/.config/nvda_remote_go/sessions")
+srv, _ := nvda_remote_go.NewServerWithOptions(nvda_remote_go.ServerOptions{
+    Port: "6837", Sessions: store,
+})
+
+srv.SetJoinHandler(func(info nvda_remote_go.JoinInfo) {
+    var visits int
+    _ = info.Session.Get("visits", &visits) // ErrNoValue on first join
+    _ = info.Session.Set("visits", visits+1)
+    srv.SendSpeechTo(info.ClientID, "welcome back")
+})
+
+srv.SetPacketHandler(func(clientID int, p nvda_remote_go.Packet) {
+    nick, _ := srv.ChannelByClientID(clientID)
+    // every user gets their own stream, so one GUI per client is possible
+})
+```
+
+- `Session` is a small JSON key/value store; `Save` writes it atomically to
+  `<dir>/<channel>.json`, `NewSessionStore(dir)` loads it back on restart.
+- Per client sending: `SendToClient`, `SendToChannel`, `SendSpeechTo`,
+  `CancelSpeechTo`, `SendBeepTo`, `ClientsInChannel`, `ChannelByClientID`.
+- Sessions are flushed when a client leaves and when the server closes.
+
 ## Installation
 ```bash
 go get github.com/denizsincar29/nvda_remote_go

@@ -37,6 +37,38 @@ The vgui package enables you to create virtual GUI elements that exist only in m
 
 The NVDA remote client **MUST** be connected in **slave mode** for the vgui to work properly. This is because the slave client receives key press events from the controller client.
 
+## Running as a server (no relay)
+
+The handler talks to an interface, not to a concrete client:
+
+```go
+type Remote interface {
+    SetEventHandler(func(nvda_remote_go.Packet))
+    SendSpeech(text string, args ...int)
+    CancelSpeech()
+}
+```
+
+Both `*nvda_remote_go.NVDARemoteClient` and `*nvda_remote_go.NVDARemoteServer`
+implement it, so the same GUI works either as a client of a relay or as the
+endpoint a master connects to directly:
+
+```go
+srv, _ := nvda_remote_go.NewServer("0.0.0.0", "6837", "my-channel", logger)
+h := vgui.NewHandler(srv, gui, logger) // server instead of client
+h.Start()
+```
+
+The example app follows the same switch:
+
+```bash
+NVDA_REMOTE_MODE=server NVDA_SERVER_PORT=6837 NVDA_SERVER_CHANNEL=mykey go run ./examples/vgui
+```
+
+Note: the server keeps its TLS identity in
+`~/.config/nvda_remote_go/server.{crt,key}`, generated once and reused on every
+start, so clients see the same server every time.
+
 ## Quick Start
 
 ```go

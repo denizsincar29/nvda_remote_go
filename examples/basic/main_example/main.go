@@ -44,7 +44,7 @@ func main() {
 				if k == "leftControl" || k == "rightControl" {
 					remote.CancelSpeech()
 				}
-				logger.Info("Key event received:", k)
+				logger.Info("Key event received", "key", k)
 
 			}
 		case <-ticker.C:

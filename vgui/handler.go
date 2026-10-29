@@ -7,9 +7,30 @@ import (
 	"github.com/denizsincar29/nvda_remote_go"
 )
 
+// Remote is the part of the NVDA remote API the GUI needs. Both
+// *nvda_remote_go.NVDARemoteClient and *nvda_remote_go.NVDARemoteServer
+// satisfy it, so a virtual GUI works the same whether it is a client of a
+// relay or the server the master connects to directly.
+type Remote interface {
+	SetEventHandler(func(nvda_remote_go.Packet))
+	SendSpeech(text string, args ...int)
+	CancelSpeech()
+}
+
+// HandlerOption configures a Handler.
+type HandlerOption func(*Handler)
+
+// WithExternalEvents tells the handler that its caller routes packets itself
+// (for example a server that keeps one GUI per connected client). In that mode
+// Start does not install a global event handler; feed the handler with
+// HandlePacket instead.
+func WithExternalEvents() HandlerOption {
+	return func(h *Handler) { h.externalEvents = true }
+}
+
 // Handler manages the connection between a virtual GUI and an NVDA remote client
 type Handler struct {
-	client       *nvda_remote_go.NVDARemoteClient
+	client       Remote
 	gui          *GUI
 	logger       *slog.Logger
 	mu           sync.RWMutex
@@ -17,11 +38,13 @@ type Handler struct {
 	shiftPressed bool // Track shift key state for Shift+Tab
 	ctrlPressed  bool // Track ctrl key state for Ctrl+key combinations
 	altPressed   bool // Track alt key state for Alt+key combinations
+
+	externalEvents bool
 }
 
 // NewHandler creates a new vgui handler for the given NVDA remote client
 // The client MUST be in slave mode for the vgui to work properly
-func NewHandler(client *nvda_remote_go.NVDARemoteClient, gui *GUI, logger *slog.Logger) *Handler {
+func NewHandler(client Remote, gui *GUI, logger *slog.Logger, opts ...HandlerOption) *Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -32,15 +55,13 @@ func NewHandler(client *nvda_remote_go.NVDARemoteClient, gui *GUI, logger *slog.
 		logger: logger,
 		active: false,
 	}
+	for _, opt := range opts {
+		opt(handler)
+	}
 
 	// Set up speech callback
 	gui.SetSpeechCallback(func(text string) {
-		if text != "" {
-			// Cancel previous speech to ensure new speech interrupts
-			client.CancelSpeech()
-			logger.Debug("Cancelled previous speech before new announcement", "text", text)
-			client.SendSpeech(text)
-		}
+		handler.speak(text)
 	})
 
 	return handler
@@ -54,17 +75,25 @@ func (h *Handler) Start() {
 
 	h.logger.Info("VGUI handler started")
 
-	// Set event handler for the client
-	h.client.SetEventHandler(func(packet nvda_remote_go.Packet) {
-		h.handleEvent(packet)
-	})
+	// Set event handler for the client unless the caller routes packets itself.
+	if !h.externalEvents {
+		h.client.SetEventHandler(func(packet nvda_remote_go.Packet) {
+			h.handleEvent(packet)
+		})
+	}
 
 	// Speak the initial focused element
-	if initialText := h.gui.SpeakFocusedElement(); initialText != "" {
-		// Cancel any previous speech before initial announcement
-		h.client.CancelSpeech()
-		h.client.SendSpeech(initialText)
+	h.speak(h.gui.SpeakFocusedElement())
+}
+
+// speak interrupts the current announcement and says text. An empty text is a
+// no-op, so callers can pass the result of a GUI method straight through.
+func (h *Handler) speak(text string) {
+	if text == "" {
+		return
 	}
+	h.client.CancelSpeech()
+	h.client.SendSpeech(text)
 }
 
 // Stop stops handling key events
@@ -81,6 +110,12 @@ func (h *Handler) IsActive() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.active
+}
+
+// HandlePacket feeds one packet into the GUI. Use it with WithExternalEvents
+// when several GUIs share a single connection (one per server client).
+func (h *Handler) HandlePacket(packet nvda_remote_go.Packet) {
+	h.handleEvent(packet)
 }
 
 // handleEvent processes events from the NVDA remote client
@@ -132,8 +167,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 			newLayout := h.gui.SwitchKeyboardLayout()
 			layoutName := h.gui.GetKeyboardLayoutName(newLayout)
 			h.logger.Info("Keyboard layout switched", "layout", layoutName)
-			h.client.CancelSpeech()
-			h.client.SendSpeech("Layout: " + layoutName)
+			h.speak("Layout: " + layoutName)
 		}
 		return // Don't process modifier key itself
 	}
@@ -156,8 +190,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 			newLayout := h.gui.SwitchKeyboardLayout()
 			layoutName := h.gui.GetKeyboardLayoutName(newLayout)
 			h.logger.Info("Keyboard layout switched", "layout", layoutName)
-			h.client.CancelSpeech()
-			h.client.SendSpeech("Layout: " + layoutName)
+			h.speak("Layout: " + layoutName)
 		}
 		return // Don't process modifier key itself
 	}
@@ -171,8 +204,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 		if shiftPressed {
 			// Shift+Tab: Move focus backward
 			if speechText := h.gui.MoveFocusBackward(); speechText != "" {
-				h.client.CancelSpeech()
-				h.client.SendSpeech(speechText)
+				h.speak(speechText)
 			}
 			return
 		}
@@ -194,8 +226,7 @@ func (h *Handler) handleKeyEvent(event nvda_remote_go.KeyPacket) {
 
 	// Let the GUI handle the key with modifiers and get speech output
 	if speechText := h.gui.HandleKeyWithModifiers(key, modifiers, event.Pressed); speechText != "" {
-		h.client.CancelSpeech()
-		h.client.SendSpeech(speechText)
+		h.speak(speechText)
 	}
 }
 
@@ -204,7 +235,7 @@ func (h *Handler) GetGUI() *GUI {
 	return h.gui
 }
 
-// GetClient returns the NVDA remote client instance
-func (h *Handler) GetClient() *nvda_remote_go.NVDARemoteClient {
+// GetRemote returns the remote this GUI is attached to (client or server).
+func (h *Handler) GetRemote() Remote {
 	return h.client
 }
